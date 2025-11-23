@@ -136,6 +136,7 @@ def load_books_from_csv(csv_path):
 
 def create_movie_tasks():
     """Create sample movie tasks for the experiment"""
+    # Provide distinct scenario prompts per interface so users see varied filters
     tasks = [
         {
             'task_id': 'T01',
@@ -153,28 +154,28 @@ def create_movie_tasks():
         },
         {
             'task_id': 'T03',
-            'description': 'Find all movies released after 2015 with runtime under 100 minutes.',
+            'description': 'Use the LLM-assist interface to retrieve non-English comedies released between 2000 and 2015 with runtimes under 110 minutes.',
             'complexity': 'simple',
             'interface_type': 'llm_assist',
             'ground_truth': []
         },
         {
             'task_id': 'T04',
-            'description': 'Find all drama or thriller movies with a female lead, budget under $10M, sorted by highest revenue.',
+            'description': 'Ask the LLM-assist interface for science fiction or adventure films released after 2008 with budgets above $80M and revenues over $200M, sorted by revenue.',
             'complexity': 'complex',
             'interface_type': 'llm_assist',
             'ground_truth': []
         },
         {
             'task_id': 'T05',
-            'description': 'Find all movies released after 2015 with runtime under 100 minutes.',
+            'description': 'Ask the LLM-only interface for mystery or crime movies released before 2000 with runtimes under 130 minutes and budgets below $40M.',
             'complexity': 'simple',
             'interface_type': 'llm_only',
             'ground_truth': []
         },
         {
             'task_id': 'T06',
-            'description': 'Find all drama or thriller movies with a female lead, budget under $10M, sorted by highest revenue.',
+            'description': 'Use the LLM-only interface to surface female-led drama or history movies released between 1995 and 2020 with budgets under $35M but revenues above $90M.',
             'complexity': 'complex',
             'interface_type': 'llm_only',
             'ground_truth': []
