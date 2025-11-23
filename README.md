@@ -1,6 +1,6 @@
-# HCI Research Experiment - Movie Dataset Search Platform
+# HCI Research Experiment - Movie & Book Dataset Search Platform
 
-A web-based dataset search platform for HCI research comparing three search interfaces:
+A web-based dataset search platform for HCI research comparing three search interfaces across multiple datasets (TMDB movies and Goodreads books):
 1. **Faceted baseline** - Traditional filter-based search
 2. **LLM-assisted NL with preview** - Natural language input with query preview
 3. **LLM-only NL with RAG** - Natural language input with direct answers
@@ -20,6 +20,7 @@ A web-based dataset search platform for HCI research comparing three search inte
 - Node.js 16+
 - OpenAI API key (for LLM features)
 - TMDB 5000 Movies dataset CSV file
+- Goodreads Books dataset CSV file (e.g., `books.csv`)
 
 ### Backend Setup
 
@@ -56,12 +57,17 @@ DATABASE_URL=sqlite:///hci_experiment.db
    - Place `tmdb_5000_movies.csv` in the backend directory
    - Or set `TMDB_CSV_PATH` in `.env` to point to the file location
 
-7. Load the data into the database:
+7. Download the Goodreads Books dataset:
+   - Download from: https://www.kaggle.com/datasets/jealousleopard/goodreadsbooks
+   - Place `books.csv` in the backend directory
+   - Or set `BOOKS_CSV_PATH` in `.env` to point to the file location
+
+8. Load the data (movies, books, and sample tasks) into the database:
 ```bash
 python preprocess_data.py
 ```
 
-8. Start the Flask server:
+9. Start the Flask server:
 ```bash
 # Make sure you're in the backend directory and venv is activated
 source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -123,7 +129,7 @@ The frontend will run on `http://localhost:3000`
 ## Usage
 
 1. Open `http://localhost:3000` in your browser
-2. Enter a participant ID (e.g., "P01")
+2. Choose a dataset (Movies or Books) and enter a participant ID (e.g., "P01")
 3. Read and accept the consent form
 4. Complete the experiment tasks in the assigned interface order
 5. Fill out questionnaires after each interface
@@ -136,19 +142,22 @@ The frontend will run on `http://localhost:3000`
 4. **Questionnaires**: After each interface, complete SUS, NASA-TLX, Trust, and Preference questionnaires
 5. **Completion**: View completion message
 
+> **Note:** The selected dataset (movies or books) stays consistent throughout the participant's session and determines which tasks, filters, and search schemas are used.
+
 ## Data Collection
 
 All interactions are logged to the database:
 
 - **Logs**: All events (filter changes, queries, task starts/ends)
 - **Questionnaires**: All questionnaire responses
-- **Task Submissions**: Selected movies and answers for each task
+- **Task Submissions**: Selected items (movies or books) and answers for each task
 
 ### Database Schema
 
 - `movies`: Movie data from TMDB dataset
+- `books`: Book data from the Goodreads dataset
 - `participants`: Participant information and interface order
-- `tasks`: Task definitions with ground truth
+- `tasks`: Task definitions with ground truth and `dataset_type`
 - `log_entries`: All interaction events
 - `questionnaire_responses`: Questionnaire submissions
 
@@ -157,13 +166,13 @@ All interactions are logged to the database:
 ### Experiment Control
 - `POST /api/experiment/participant` - Create/get participant
 - `POST /api/experiment/consent` - Record consent
-- `GET /api/experiment/plan?participant_id=X` - Get experiment plan
+- `GET /api/experiment/plan?participant_id=X&dataset_type=movies|books` - Get experiment plan scoped to a dataset
 
 ### Search
-- `POST /api/search/faceted` - Faceted search
-- `POST /api/search/llm_assist/parse` - Parse NL query (LLM-assisted)
-- `POST /api/search/llm_assist/execute` - Execute parsed query
-- `POST /api/search/llm_only` - LLM-only search with RAG
+- `POST /api/search/faceted` - Faceted search (body includes `dataset_type`)
+- `POST /api/search/llm_assist/parse` - Parse NL query (LLM-assisted, dataset-specific schema)
+- `POST /api/search/llm_assist/execute` - Execute parsed query on selected dataset
+- `POST /api/search/llm_only` - LLM-only search with RAG for the selected dataset
 
 ### Logging
 - `POST /api/log` - Generic event logging
@@ -177,7 +186,7 @@ All interactions are logged to the database:
 
 ### Adding New Tasks
 
-Edit `backend/preprocess_data.py` and add tasks to the `create_sample_tasks()` function.
+Edit `backend/preprocess_data.py` and update the dataset-specific helpers (`create_movie_tasks()` and/or `create_book_tasks()`). Each task must specify both the `interface_type` and `dataset_type`.
 
 ### Modifying Interfaces
 
@@ -284,7 +293,7 @@ FROM (
 
 - **Task Completion Time**: Duration from task_started to task_completed
 - **Reformulations**: Number of query modifications (counted from logs)
-- **Accuracy**: Compare selected_movie_ids with ground_truth (requires manual comparison)
+- **Accuracy**: Compare `selected_movie_ids` (movies or books) with ground_truth (requires manual comparison)
 - **SUS Scores**: System Usability Scale responses
 - **NASA-TLX Scores**: Workload assessment scores
 - **Trust Ratings**: Trust questionnaire responses

@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
+from sqlalchemy import inspect, text
 import os
 
 load_dotenv()
@@ -18,7 +19,55 @@ db.init_app(app)
 CORS(app, supports_credentials=True)
 
 # Import models after db is initialized
-from models import Movie, Participant, Task, LogEntry, QuestionnaireResponse
+from models import Movie, Book, Participant, Task, LogEntry, QuestionnaireResponse
+
+def ensure_schema_columns():
+    """Lightweight schema migrations for new columns/tables."""
+    inspector = inspect(db.engine)
+    tables = inspector.get_table_names()
+    
+    # Ensure books table exists with expected columns
+    def add_column_if_missing(table_name, column_name, column_type_sql, existing_cols=None):
+        cols = existing_cols or {col['name'] for col in inspector.get_columns(table_name)}
+        if column_name not in cols:
+            with db.engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type_sql}"))
+            if existing_cols is not None:
+                existing_cols.add(column_name)
+    
+    book_columns_sql = {
+        'goodreads_id': 'INTEGER',
+        'title': 'VARCHAR(500)',
+        'authors': 'VARCHAR(500)',
+        'average_rating': 'FLOAT',
+        'isbn': 'VARCHAR(50)',
+        'isbn13': 'VARCHAR(50)',
+        'language': 'VARCHAR(50)',
+        'num_pages': 'INTEGER',
+        'ratings_count': 'INTEGER',
+        'text_reviews_count': 'INTEGER',
+        'publication_year': 'INTEGER',
+        'publisher': 'VARCHAR(255)'
+    }
+    
+    if 'books' not in tables:
+        Book.__table__.create(bind=db.engine, checkfirst=True)
+        tables.append('books')
+    else:
+        # Ensure legacy tables gain any missing columns
+        existing_cols = {col['name'] for col in inspector.get_columns('books')}
+        for col_name, col_type in book_columns_sql.items():
+            add_column_if_missing('books', col_name, col_type)
+    
+    if 'tasks' in tables:
+        task_columns = {col['name'] for col in inspector.get_columns('tasks')}
+        if 'dataset_type' not in task_columns:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN dataset_type VARCHAR(50) DEFAULT 'movies'"))
+
+with app.app_context():
+    db.create_all()
+    ensure_schema_columns()
 
 # Import and register routes
 def register_routes():

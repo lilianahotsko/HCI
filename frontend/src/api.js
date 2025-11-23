@@ -16,40 +16,44 @@ export const createParticipant = (participantId) =>
 export const giveConsent = (participantId) =>
   api.post('/experiment/consent', { participant_id: participantId })
 
-export const getExperimentPlan = (participantId) =>
-  api.get('/experiment/plan', { params: { participant_id: participantId } })
+export const getExperimentPlan = (participantId, datasetType = 'movies') =>
+  api.get('/experiment/plan', { params: { participant_id: participantId, dataset_type: datasetType } })
 
-export const getGenres = () =>
-  api.get('/experiment/genres')
+export const getGenres = (datasetType = 'movies') =>
+  api.get('/experiment/genres', { params: { dataset_type: datasetType } })
 
 // Search endpoints
-export const facetedSearch = (participantId, taskId, filters, sort) =>
+export const facetedSearch = (participantId, taskId, filters, sort, datasetType = 'movies') =>
   api.post('/search/faceted', {
     participant_id: participantId,
     task_id: taskId,
     filters,
-    sort
+    sort,
+    dataset_type: datasetType
   })
 
-export const llmAssistParse = (participantId, taskId, nlQuery) =>
+export const llmAssistParse = (participantId, taskId, nlQuery, datasetType = 'movies') =>
   api.post('/search/llm_assist/parse', {
     participant_id: participantId,
     task_id: taskId,
-    nl_query: nlQuery
+    nl_query: nlQuery,
+    dataset_type: datasetType
   })
 
-export const llmAssistExecute = (participantId, taskId, parsedQuery) =>
+export const llmAssistExecute = (participantId, taskId, parsedQuery, datasetType = 'movies') =>
   api.post('/search/llm_assist/execute', {
     participant_id: participantId,
     task_id: taskId,
-    parsed_query: parsedQuery
+    parsed_query: parsedQuery,
+    dataset_type: datasetType
   })
 
-export const llmOnlySearch = (participantId, taskId, nlQuery) =>
+export const llmOnlySearch = (participantId, taskId, nlQuery, datasetType = 'movies') =>
   api.post('/search/llm_only', {
     participant_id: participantId,
     task_id: taskId,
-    nl_query: nlQuery
+    nl_query: nlQuery,
+    dataset_type: datasetType
   })
 
 // Logging endpoints
@@ -62,19 +66,21 @@ export const logEvent = (participantId, interfaceType, taskId, eventType, payloa
     payload
   })
 
-export const startTask = (participantId, interfaceType, taskId) =>
+export const startTask = (participantId, interfaceType, taskId, datasetType) =>
   api.post('/log/task/start', {
     participant_id: participantId,
     interface_type: interfaceType,
-    task_id: taskId
+    task_id: taskId,
+    dataset_type: datasetType
   })
 
-export const endTask = (participantId, interfaceType, taskId, submission) =>
+export const endTask = (participantId, interfaceType, taskId, submission, datasetType) =>
   api.post('/log/task/end', {
     participant_id: participantId,
     interface_type: interfaceType,
     task_id: taskId,
-    submission
+    submission,
+    dataset_type: datasetType
   })
 
 // Questionnaire endpoints

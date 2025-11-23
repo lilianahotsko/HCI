@@ -4,10 +4,12 @@ import LLMAssistInterface from './interfaces/LLMAssistInterface'
 import LLMOnlyInterface from './interfaces/LLMOnlyInterface'
 import { startTask, endTask } from '../api'
 
-function InterfaceBlock({ participantId, interfaceType, tasks, currentTaskIndex, onTaskComplete }) {
+function InterfaceBlock({ participantId, interfaceType, tasks, currentTaskIndex, onTaskComplete, datasetType = 'movies' }) {
   const [taskStarted, setTaskStarted] = useState(false)
   const [taskStartTime, setTaskStartTime] = useState(null)
   const currentTask = tasks[currentTaskIndex]
+  const taskDataset = currentTask?.dataset_type || datasetType
+  const datasetLabel = taskDataset === 'books' ? 'Books' : 'Movies'
 
   useEffect(() => {
     // Reset task state when task changes
@@ -19,7 +21,7 @@ function InterfaceBlock({ participantId, interfaceType, tasks, currentTaskIndex,
     if (!currentTask) return
 
     try {
-      await startTask(participantId, interfaceType, currentTask.task_id)
+      await startTask(participantId, interfaceType, currentTask.task_id, taskDataset)
       setTaskStarted(true)
       setTaskStartTime(Date.now())
     } catch (err) {
@@ -36,7 +38,7 @@ function InterfaceBlock({ participantId, interfaceType, tasks, currentTaskIndex,
       await endTask(participantId, interfaceType, currentTask.task_id, {
         ...submission,
         task_duration_ms: taskDuration
-      })
+      }, taskDataset)
       onTaskComplete()
     } catch (err) {
       console.error('Failed to submit answer:', err)
@@ -58,10 +60,11 @@ function InterfaceBlock({ participantId, interfaceType, tasks, currentTaskIndex,
     llm_only: 'LLM-Only Search'
   }
 
+  const datasetFriendly = taskDataset === 'books' ? 'books' : 'movies'
   const interfaceDescriptions = {
-    faceted: 'Use the filters on the left to search for movies. Select movies from the results and submit your answer.',
-    llm_assist: 'Enter your query in natural language. Review the interpreted query preview, then confirm to see results.',
-    llm_only: 'Enter your query in natural language. The system will provide a direct answer based on the movie database.'
+    faceted: `Use the filters on the left to search for ${datasetFriendly}. Select relevant results and submit your answer.`,
+    llm_assist: `Enter your query in natural language. Review the interpreted query preview, then confirm to see ${datasetFriendly} results.`,
+    llm_only: `Enter your query in natural language. The system will provide a direct answer based on the ${datasetFriendly} database.`
   }
 
   return (
@@ -86,6 +89,9 @@ function InterfaceBlock({ participantId, interfaceType, tasks, currentTaskIndex,
             <span>
               <strong>Task:</strong> {currentTaskIndex + 1} of {tasks.length}
             </span>
+            <span>
+              <strong>Dataset:</strong> {datasetLabel}
+            </span>
           </div>
         </div>
 
@@ -107,6 +113,7 @@ function InterfaceBlock({ participantId, interfaceType, tasks, currentTaskIndex,
               <FacetedInterface
                 participantId={participantId}
                 taskId={currentTask.task_id}
+                datasetType={taskDataset}
                 onSubmit={handleSubmitAnswer}
               />
             )}
@@ -115,6 +122,7 @@ function InterfaceBlock({ participantId, interfaceType, tasks, currentTaskIndex,
               <LLMAssistInterface
                 participantId={participantId}
                 taskId={currentTask.task_id}
+                datasetType={taskDataset}
                 onSubmit={handleSubmitAnswer}
               />
             )}
@@ -123,6 +131,7 @@ function InterfaceBlock({ participantId, interfaceType, tasks, currentTaskIndex,
               <LLMOnlyInterface
                 participantId={participantId}
                 taskId={currentTask.task_id}
+                datasetType={taskDataset}
                 onSubmit={handleSubmitAnswer}
               />
             )}

@@ -36,7 +36,7 @@ def get_or_create_participant(participant_id):
         db.session.rollback()
         raise Exception(f"Database error: {str(e)}")
 
-def get_experiment_plan(participant_id):
+def get_experiment_plan(participant_id, dataset_type='movies'):
     """Returns the full experiment plan for a participant"""
     participant = get_or_create_participant(participant_id)
     
@@ -50,13 +50,14 @@ def get_experiment_plan(participant_id):
     # Get tasks for each interface
     plan = {}
     for interface in interface_order:
-        tasks = Task.query.filter_by(interface_type=interface).all()
+        tasks = Task.query.filter_by(interface_type=interface, dataset_type=dataset_type).all()
         plan[interface] = [task.to_dict() for task in tasks]
     
     return {
         'participant_id': participant_id,
         'interface_order': interface_order,
         'tasks': plan,
+        'dataset_type': dataset_type,
         'consent_given': participant.consent_given
     }
 
