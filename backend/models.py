@@ -33,6 +33,40 @@ class Movie(db.Model):
             'overview': self.overview
         }
 
+class Book(db.Model):
+    __tablename__ = 'books'
+    
+    id = Column(Integer, primary_key=True)
+    goodreads_id = Column(Integer, unique=True)
+    title = Column(String(500), nullable=False)
+    authors = Column(String(500))
+    average_rating = Column(Float)
+    isbn = Column(String(50))
+    isbn13 = Column(String(50))
+    language = Column(String(50))
+    num_pages = Column(Integer)
+    ratings_count = Column(Integer)
+    text_reviews_count = Column(Integer)
+    publication_year = Column(Integer)
+    publisher = Column(String(255))
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'goodreads_id': self.goodreads_id,
+            'title': self.title,
+            'authors': [a.strip() for a in self.authors.split('/') if a.strip()] if self.authors else [],
+            'average_rating': self.average_rating,
+            'isbn': self.isbn,
+            'isbn13': self.isbn13,
+            'language': self.language,
+            'num_pages': self.num_pages,
+            'ratings_count': self.ratings_count,
+            'text_reviews_count': self.text_reviews_count,
+            'publication_year': self.publication_year,
+            'publisher': self.publisher
+        }
+
 class Participant(db.Model):
     __tablename__ = 'participants'
     
@@ -62,6 +96,7 @@ class Task(db.Model):
     complexity = Column(String(20))  # 'simple' or 'complex'
     ground_truth = Column(Text)  # JSON array of movie IDs or description
     interface_type = Column(String(50))  # 'faceted', 'llm_assist', 'llm_only'
+    dataset_type = Column(String(50), nullable=False, default='movies')
     
     def to_dict(self):
         return {
@@ -70,7 +105,8 @@ class Task(db.Model):
             'description': self.description,
             'complexity': self.complexity,
             'ground_truth': json.loads(self.ground_truth) if self.ground_truth else [],
-            'interface_type': self.interface_type
+            'interface_type': self.interface_type,
+            'dataset_type': self.dataset_type or 'movies'
         }
 
 class LogEntry(db.Model):

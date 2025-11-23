@@ -1,32 +1,115 @@
 import React from 'react'
 
-function ResultsTable({ results, selectedMovies, onMovieSelect, onSelectAll }) {
-  const formatCurrency = (value) => {
-    if (!value) return 'N/A'
-    return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
-  }
+const LANGUAGE_LABELS = {
+  eng: 'English',
+  spa: 'Spanish',
+  fre: 'French',
+  ger: 'German',
+  ita: 'Italian',
+  rus: 'Russian',
+  por: 'Portuguese',
+  ara: 'Arabic',
+  chi: 'Chinese',
+  jpn: 'Japanese',
+  mul: 'Multiple',
+  'en-US': 'English (US)'
+}
 
-  const allSelected = results.length > 0 && results.every(movie => selectedMovies.includes(movie.id))
-  const someSelected = results.some(movie => selectedMovies.includes(movie.id))
+const MOVIE_COLUMNS = [
+  {
+    key: 'release_year',
+    label: 'Year',
+    render: (item) => item.release_year || 'N/A'
+  },
+  {
+    key: 'runtime',
+    label: 'Runtime',
+    render: (item) => (item.runtime ? `${item.runtime} min` : 'N/A')
+  },
+  {
+    key: 'genres',
+    label: 'Genres',
+    render: (item) => (item.genres && item.genres.length > 0 ? item.genres.join(', ') : 'N/A')
+  },
+  {
+    key: 'lead_gender',
+    label: 'Lead Gender',
+    render: (item) => item.lead_gender || 'N/A'
+  },
+  {
+    key: 'budget',
+    label: 'Budget',
+    render: (item) => formatCurrency(item.budget)
+  },
+  {
+    key: 'revenue',
+    label: 'Revenue',
+    render: (item) => formatCurrency(item.revenue)
+  }
+]
+
+const BOOK_COLUMNS = [
+  {
+    key: 'authors',
+    label: 'Authors',
+    render: (item) => (item.authors && item.authors.length > 0 ? item.authors.join(', ') : 'N/A')
+  },
+  {
+    key: 'publication_year',
+    label: 'Year',
+    render: (item) => item.publication_year || 'N/A'
+  },
+  {
+    key: 'num_pages',
+    label: 'Pages',
+    render: (item) => item.num_pages || 'N/A'
+  },
+  {
+    key: 'average_rating',
+    label: 'Avg Rating',
+    render: (item) => (item.average_rating ? item.average_rating.toFixed(2) : 'N/A')
+  },
+  {
+    key: 'language',
+    label: 'Language',
+    render: (item) => formatLanguage(item.language)
+  },
+  {
+    key: 'ratings_count',
+    label: 'Ratings Count',
+    render: (item) => (item.ratings_count ? item.ratings_count.toLocaleString() : 'N/A')
+  }
+]
+
+const formatCurrency = (value) => {
+  if (!value) return 'N/A'
+  return `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+}
+
+const formatLanguage = (code) => {
+  if (!code) return 'N/A'
+  return LANGUAGE_LABELS[code] || code
+}
+
+function ResultsTable({ results, datasetType = 'movies', selectedItems = [], onItemSelect, onSelectAll }) {
+  const columnConfig = datasetType === 'books' ? BOOK_COLUMNS : MOVIE_COLUMNS
+  const allSelected = results.length > 0 && results.every(item => selectedItems.includes(item.id))
 
   const handleSelectAll = () => {
     if (onSelectAll) {
       onSelectAll()
     } else {
-      // Fallback: select/deselect all manually
-      const allMovieIds = results.map(movie => movie.id)
+      const allIds = results.map(item => item.id)
       if (allSelected) {
-        // Deselect all
-        allMovieIds.forEach(id => {
-          if (selectedMovies.includes(id)) {
-            onMovieSelect(id)
+        allIds.forEach(id => {
+          if (selectedItems.includes(id)) {
+            onItemSelect(id)
           }
         })
       } else {
-        // Select all
-        allMovieIds.forEach(id => {
-          if (!selectedMovies.includes(id)) {
-            onMovieSelect(id)
+        allIds.forEach(id => {
+          if (!selectedItems.includes(id)) {
+            onItemSelect(id)
           }
         })
       }
@@ -52,83 +135,57 @@ function ResultsTable({ results, selectedMovies, onMovieSelect, onSelectAll }) {
             {allSelected ? 'Deselect All' : 'Select All'}
           </button>
           <span style={{ fontSize: '14px', color: '#666' }}>
-            {selectedMovies.length} of {results.length} selected
+            {selectedItems.length} of {results.length} selected
           </span>
         </div>
       )}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ backgroundColor: '#f5f5f5' }}>
-            <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>
-              Select
-            </th>
-            <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>
-              Title
-            </th>
-            <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>
-              Year
-            </th>
-            <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>
-              Runtime
-            </th>
-            <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>
-              Genres
-            </th>
-            <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>
-              Lead Gender
-            </th>
-            <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>
-              Budget
-            </th>
-            <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>
-              Revenue
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {results.map((movie) => (
-            <tr
-              key={movie.id}
-              style={{
-                backgroundColor: selectedMovies.includes(movie.id) ? '#e3f2fd' : 'white',
-                cursor: 'pointer'
-              }}
-              onClick={() => onMovieSelect(movie.id)}
-            >
-              <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                <input
-                  type="checkbox"
-                  checked={selectedMovies.includes(movie.id)}
-                  onChange={() => onMovieSelect(movie.id)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </td>
-              <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                {movie.title}
-              </td>
-              <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                {movie.release_year || 'N/A'}
-              </td>
-              <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                {movie.runtime ? `${movie.runtime} min` : 'N/A'}
-              </td>
-              <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                {movie.genres ? movie.genres.join(', ') : 'N/A'}
-              </td>
-              <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                {movie.lead_gender || 'N/A'}
-              </td>
-              <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                {formatCurrency(movie.budget)}
-              </td>
-              <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                {formatCurrency(movie.revenue)}
-              </td>
+          <thead>
+            <tr style={{ backgroundColor: '#f5f5f5' }}>
+              <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>
+                Select
+              </th>
+              <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>
+                Title
+              </th>
+              {columnConfig.map(column => (
+                <th key={column.key} style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>
+                  {column.label}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {results.map((item) => (
+              <tr
+                key={item.id}
+                style={{
+                  backgroundColor: selectedItems.includes(item.id) ? '#e3f2fd' : 'white',
+                  cursor: 'pointer'
+                }}
+                onClick={() => onItemSelect(item.id)}
+              >
+                <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.includes(item.id)}
+                    onChange={() => onItemSelect(item.id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </td>
+                <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                  {item.title}
+                </td>
+                {columnConfig.map(column => (
+                  <td key={column.key} style={{ padding: '10px', border: '1px solid #ddd' }}>
+                    {column.render(item)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   )

@@ -2,14 +2,14 @@ import React, { useState } from 'react'
 import { llmAssistParse, llmAssistExecute } from '../../api'
 import ResultsTable from '../ResultsTable'
 
-function LLMAssistInterface({ participantId, taskId, onSubmit }) {
+function LLMAssistInterface({ participantId, taskId, datasetType = 'movies', onSubmit }) {
   const [nlQuery, setNlQuery] = useState('')
   const [parsedQuery, setParsedQuery] = useState(null)
   const [preview, setPreview] = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [parsing, setParsing] = useState(false)
-  const [selectedMovies, setSelectedMovies] = useState([])
+  const [selectedItems, setSelectedItems] = useState([])
   const [reformulations, setReformulations] = useState(0)
 
   const handleParse = async () => {
@@ -20,7 +20,7 @@ function LLMAssistInterface({ participantId, taskId, onSubmit }) {
 
     setParsing(true)
     try {
-      const response = await llmAssistParse(participantId, taskId, nlQuery)
+      const response = await llmAssistParse(participantId, taskId, nlQuery, datasetType)
       setParsedQuery(response.data.parsed_query)
       setPreview(response.data.human_readable)
     } catch (err) {
@@ -39,8 +39,9 @@ function LLMAssistInterface({ participantId, taskId, onSubmit }) {
 
     setLoading(true)
     try {
-      const response = await llmAssistExecute(participantId, taskId, parsedQuery)
+      const response = await llmAssistExecute(participantId, taskId, parsedQuery, datasetType)
       setResults(response.data.results || [])
+      setSelectedItems([])
     } catch (err) {
       console.error('Search failed:', err)
       alert('Search failed. Please try again.')
@@ -54,28 +55,29 @@ function LLMAssistInterface({ participantId, taskId, onSubmit }) {
     setParsedQuery(null)
     setPreview('')
     setResults([])
+    setSelectedItems([])
   }
 
-  const handleMovieSelect = (movieId) => {
-    setSelectedMovies(prev => 
-      prev.includes(movieId)
-        ? prev.filter(id => id !== movieId)
-        : [...prev, movieId]
+  const handleItemSelect = (itemId) => {
+    setSelectedItems(prev => 
+      prev.includes(itemId)
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
     )
   }
 
   const handleSelectAll = () => {
-    const allMovieIds = results.map(movie => movie.id)
-    const allSelected = allMovieIds.every(id => selectedMovies.includes(id))
+    const allIds = results.map(item => item.id)
+    const allSelected = allIds.every(id => selectedItems.includes(id))
     
     if (allSelected) {
       // Deselect all
-      setSelectedMovies(prev => prev.filter(id => !allMovieIds.includes(id)))
+      setSelectedItems(prev => prev.filter(id => !allIds.includes(id)))
     } else {
       // Select all
-      setSelectedMovies(prev => {
+      setSelectedItems(prev => {
         const newSelection = [...prev]
-        allMovieIds.forEach(id => {
+        allIds.forEach(id => {
           if (!newSelection.includes(id)) {
             newSelection.push(id)
           }
@@ -89,9 +91,10 @@ function LLMAssistInterface({ participantId, taskId, onSubmit }) {
     onSubmit({
       nl_query: nlQuery,
       parsed_query: parsedQuery,
-      selected_movie_ids: selectedMovies,
+      selected_movie_ids: selectedItems,
       result_count: results.length,
-      reformulations: reformulations
+      reformulations: reformulations,
+      dataset_type: datasetType
     })
   }
 
@@ -103,7 +106,11 @@ function LLMAssistInterface({ participantId, taskId, onSubmit }) {
           <textarea
             value={nlQuery}
             onChange={(e) => setNlQuery(e.target.value)}
-            placeholder="e.g., Find all dramas or thrillers with a female lead, budget under $10M, sorted by highest revenue"
+            placeholder={
+              datasetType === 'books'
+                ? 'e.g., Find English books over 400 pages published after 2005 with average rating above 4.2'
+                : 'e.g., Find all dramas or thrillers with a female lead, budget under $10M, sorted by highest revenue'
+            }
             rows="3"
             disabled={parsing}
           />
@@ -133,13 +140,14 @@ function LLMAssistInterface({ participantId, taskId, onSubmit }) {
           <h3>Results ({results.length})</h3>
           <ResultsTable
             results={results}
-            selectedMovies={selectedMovies}
-            onMovieSelect={handleMovieSelect}
+            datasetType={datasetType}
+            selectedItems={selectedItems}
+            onItemSelect={handleItemSelect}
             onSelectAll={handleSelectAll}
           />
           <div style={{ marginTop: '20px' }}>
             <button onClick={handleSubmit} style={{ width: '100%' }}>
-              Submit Answer ({selectedMovies.length} selected)
+              Submit Answer ({selectedItems.length} selected)
             </button>
           </div>
         </div>

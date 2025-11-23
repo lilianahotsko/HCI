@@ -2,12 +2,12 @@ import React, { useState } from 'react'
 import { llmOnlySearch } from '../../api'
 import ResultsTable from '../ResultsTable'
 
-function LLMOnlyInterface({ participantId, taskId, onSubmit }) {
+function LLMOnlyInterface({ participantId, taskId, datasetType = 'movies', onSubmit }) {
   const [nlQuery, setNlQuery] = useState('')
   const [answer, setAnswer] = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
-  const [selectedMovies, setSelectedMovies] = useState([])
+  const [selectedItems, setSelectedItems] = useState([])
   const [reformulations, setReformulations] = useState(0)
 
   const handleSearch = async () => {
@@ -18,9 +18,10 @@ function LLMOnlyInterface({ participantId, taskId, onSubmit }) {
 
     setLoading(true)
     try {
-      const response = await llmOnlySearch(participantId, taskId, nlQuery)
+      const response = await llmOnlySearch(participantId, taskId, nlQuery, datasetType)
       setAnswer(response.data.answer || '')
       setResults(response.data.results || [])
+      setSelectedItems([])
     } catch (err) {
       console.error('Search failed:', err)
       alert('Search failed. Please try again.')
@@ -33,28 +34,29 @@ function LLMOnlyInterface({ participantId, taskId, onSubmit }) {
     setReformulations(prev => prev + 1)
     setAnswer('')
     setResults([])
+    setSelectedItems([])
   }
 
-  const handleMovieSelect = (movieId) => {
-    setSelectedMovies(prev => 
-      prev.includes(movieId)
-        ? prev.filter(id => id !== movieId)
-        : [...prev, movieId]
+  const handleItemSelect = (itemId) => {
+    setSelectedItems(prev => 
+      prev.includes(itemId)
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
     )
   }
 
   const handleSelectAll = () => {
-    const allMovieIds = results.map(movie => movie.id)
-    const allSelected = allMovieIds.every(id => selectedMovies.includes(id))
+    const allIds = results.map(item => item.id)
+    const allSelected = allIds.every(id => selectedItems.includes(id))
     
     if (allSelected) {
       // Deselect all
-      setSelectedMovies(prev => prev.filter(id => !allMovieIds.includes(id)))
+      setSelectedItems(prev => prev.filter(id => !allIds.includes(id)))
     } else {
       // Select all
-      setSelectedMovies(prev => {
+      setSelectedItems(prev => {
         const newSelection = [...prev]
-        allMovieIds.forEach(id => {
+        allIds.forEach(id => {
           if (!newSelection.includes(id)) {
             newSelection.push(id)
           }
@@ -68,9 +70,10 @@ function LLMOnlyInterface({ participantId, taskId, onSubmit }) {
     onSubmit({
       nl_query: nlQuery,
       answer: answer,
-      selected_movie_ids: selectedMovies,
+      selected_movie_ids: selectedItems,
       result_count: results.length,
-      reformulations: reformulations
+      reformulations: reformulations,
+      dataset_type: datasetType
     })
   }
 
@@ -82,7 +85,11 @@ function LLMOnlyInterface({ participantId, taskId, onSubmit }) {
           <textarea
             value={nlQuery}
             onChange={(e) => setNlQuery(e.target.value)}
-            placeholder="e.g., Give me all movies after 2015 under 100 minutes with a female lead and order them by revenue"
+            placeholder={
+              datasetType === 'books'
+                ? 'e.g., Recommend books over 300 pages published before 2000 with average rating above 4'
+                : 'e.g., Give me all movies after 2015 under 100 minutes with a female lead and order them by revenue'
+            }
             rows="3"
             disabled={loading}
           />
@@ -110,16 +117,17 @@ function LLMOnlyInterface({ participantId, taskId, onSubmit }) {
 
       {results.length > 0 && (
         <div className="card">
-          <h3>Retrieved Movies ({results.length})</h3>
+          <h3>Retrieved {datasetType === 'books' ? 'Books' : 'Movies'} ({results.length})</h3>
           <ResultsTable
             results={results}
-            selectedMovies={selectedMovies}
-            onMovieSelect={handleMovieSelect}
+            datasetType={datasetType}
+            selectedItems={selectedItems}
+            onItemSelect={handleItemSelect}
             onSelectAll={handleSelectAll}
           />
           <div style={{ marginTop: '20px' }}>
             <button onClick={handleSubmit} style={{ width: '100%' }}>
-              Submit Answer ({selectedMovies.length} selected)
+              Submit Answer ({selectedItems.length} selected)
             </button>
           </div>
         </div>

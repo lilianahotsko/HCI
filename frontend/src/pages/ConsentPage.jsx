@@ -5,6 +5,7 @@ import { giveConsent } from '../api'
 function ConsentPage() {
   const [searchParams] = useSearchParams()
   const participantId = searchParams.get('participant_id')
+  const datasetType = searchParams.get('dataset') || 'movies'
   const [consentGiven, setConsentGiven] = useState(false)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
@@ -15,7 +16,7 @@ function ConsentPage() {
     setLoading(true)
     try {
       await giveConsent(participantId)
-      navigate(`/experiment?participant_id=${encodeURIComponent(participantId)}`)
+      navigate(`/experiment?participant_id=${encodeURIComponent(participantId)}&dataset=${datasetType}`)
     } catch (err) {
       console.error('Failed to record consent:', err)
       alert('Failed to record consent. Please try again.')
@@ -34,6 +35,8 @@ function ConsentPage() {
     )
   }
 
+  const datasetLabel = datasetType === 'books' ? 'book' : 'movie'
+
   return (
     <div className="container" style={{ maxWidth: '800px', marginTop: '50px' }}>
       <div className="card">
@@ -42,7 +45,7 @@ function ConsentPage() {
           <h2>Study Overview</h2>
           <p>
             You are being invited to participate in a research study about search interfaces for datasets.
-            This study will involve using different types of search interfaces to find movies in a database.
+            This study will involve using different types of search interfaces to find {datasetLabel}s in a database.
           </p>
 
           <h2 style={{ marginTop: '30px' }}>What You Will Do</h2>

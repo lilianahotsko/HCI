@@ -6,7 +6,7 @@ import pandas as pd
 import json
 from app import app
 from database import db
-from models import Movie, Task
+from models import Movie, Task, Book
 import os
 
 def extract_genres(genres_str):
@@ -75,8 +75,68 @@ def load_movies_from_csv(csv_path):
     print(f"Successfully loaded {movies_added} movies into database")
     return movies_added
 
-def create_sample_tasks():
-    """Create sample tasks for the experiment"""
+def parse_publication_year(date_value):
+    """Extract publication year from various date formats"""
+    if pd.isna(date_value):
+        return None
+    try:
+        parsed = pd.to_datetime(str(date_value), errors='coerce')
+        return int(parsed.year) if not pd.isna(parsed) else None
+    except Exception:
+        return None
+
+def load_books_from_csv(csv_path):
+    """Load books from CSV file"""
+    print(f"Loading books from {csv_path}...")
+    df = pd.read_csv(
+        csv_path,
+        on_bad_lines='skip',
+        engine='python'
+    )
+    df.columns = [col.strip() for col in df.columns]
+    
+    print(f"Found {len(df)} books in CSV")
+    
+    books_added = 0
+    for idx, row in df.iterrows():
+        try:
+            goodreads_id = int(row.get('bookID')) if pd.notna(row.get('bookID')) else None
+            
+            if goodreads_id and Book.query.filter_by(goodreads_id=goodreads_id).first():
+                continue
+            
+            book = Book(
+                goodreads_id=goodreads_id,
+                title=row.get('title', 'Unknown'),
+                authors=row.get('authors', ''),
+                average_rating=float(row.get('average_rating')) if pd.notna(row.get('average_rating')) else None,
+                isbn=str(row.get('isbn')) if pd.notna(row.get('isbn')) else None,
+                isbn13=str(row.get('isbn13')) if pd.notna(row.get('isbn13')) else None,
+                language=row.get('language_code', '').strip() if isinstance(row.get('language_code'), str) else None,
+                num_pages=int(row.get('num_pages')) if pd.notna(row.get('num_pages')) else None,
+                ratings_count=int(row.get('ratings_count')) if pd.notna(row.get('ratings_count')) else None,
+                text_reviews_count=int(row.get('text_reviews_count')) if pd.notna(row.get('text_reviews_count')) else None,
+                publication_year=parse_publication_year(row.get('publication_date')),
+                publisher=row.get('publisher', '')
+            )
+            
+            db.session.add(book)
+            books_added += 1
+            
+            if books_added % 250 == 0:
+                print(f"Processed {books_added} books...")
+                db.session.commit()
+        except Exception as e:
+            print(f"Error processing book row {idx}: {e}")
+            continue
+    
+    db.session.commit()
+    print(f"Successfully loaded {books_added} books into database")
+    return books_added
+
+def create_movie_tasks():
+    """Create sample movie tasks for the experiment"""
+    # Provide distinct scenario prompts per interface so users see varied filters
     tasks = [
         {
             'task_id': 'T01',
@@ -94,28 +154,28 @@ def create_sample_tasks():
         },
         {
             'task_id': 'T03',
-            'description': 'Find all movies released after 2015 with runtime under 100 minutes.',
+            'description': 'Use the LLM-assist interface to retrieve non-English comedies released between 2000 and 2015 with runtimes under 110 minutes.',
             'complexity': 'simple',
             'interface_type': 'llm_assist',
             'ground_truth': []
         },
         {
             'task_id': 'T04',
-            'description': 'Find all drama or thriller movies with a female lead, budget under $10M, sorted by highest revenue.',
+            'description': 'Ask the LLM-assist interface for science fiction or adventure films released after 2008 with budgets above $80M and revenues over $200M, sorted by revenue.',
             'complexity': 'complex',
             'interface_type': 'llm_assist',
             'ground_truth': []
         },
         {
             'task_id': 'T05',
-            'description': 'Find all movies released after 2015 with runtime under 100 minutes.',
+            'description': 'Ask the LLM-only interface for mystery or crime movies released before 2000 with runtimes under 130 minutes and budgets below $40M.',
             'complexity': 'simple',
             'interface_type': 'llm_only',
             'ground_truth': []
         },
         {
             'task_id': 'T06',
-            'description': 'Find all drama or thriller movies with a female lead, budget under $10M, sorted by highest revenue.',
+            'description': 'Use the LLM-only interface to surface female-led drama or history movies released between 1995 and 2020 with budgets under $35M but revenues above $90M.',
             'complexity': 'complex',
             'interface_type': 'llm_only',
             'ground_truth': []
@@ -123,17 +183,85 @@ def create_sample_tasks():
     ]
     
     for task_data in tasks:
+        # Check if task already exists for this dataset_type
+        if Task.query.filter_by(task_id=task_data['task_id'], dataset_type='movies').first():
+            continue
         task = Task(
             task_id=task_data['task_id'],
             description=task_data['description'],
             complexity=task_data['complexity'],
             interface_type=task_data['interface_type'],
+            dataset_type='movies',
             ground_truth=json.dumps(task_data['ground_truth'])
         )
         db.session.add(task)
     
     db.session.commit()
-    print(f"Created {len(tasks)} sample tasks")
+    print(f"Ensured {len(tasks)} movie sample tasks exist")
+
+def create_book_tasks():
+    """Create one sample task per interface for the books dataset"""
+    tasks = [
+        {
+            'task_id': 'B01',
+            'description': 'Find English-language books published after 2010 with fewer than 350 pages and highlight at least three options.',
+            'complexity': 'simple',
+            'interface_type': 'faceted',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B04',
+            'description': 'Surface award-winning or bestselling books published before 1990 that have at least 4.0 average rating and fewer than 450 pages.',
+            'complexity': 'complex',
+            'interface_type': 'faceted',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B02',
+            'description': 'Using natural language, locate highly rated non-English books (average rating above 4.2) with fewer than 500 pages that were published between 2000 and 2020.',
+            'complexity': 'complex',
+            'interface_type': 'llm_assist',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B05',
+            'description': 'Ask the assistant for contemporary memoirs published after 2015 with more than 30,000 ratings and summarize how they differ.',
+            'complexity': 'complex',
+            'interface_type': 'llm_assist',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B03',
+            'description': 'Ask the LLM-only interface for the highest-rated books over 400 pages with at least 50,000 ratings that were published before 2005.',
+            'complexity': 'complex',
+            'interface_type': 'llm_only',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B06',
+            'description': 'Use the LLM-only interface to recommend cozy mystery series starters under 350 pages that have more than 500 text reviews.',
+            'complexity': 'simple',
+            'interface_type': 'llm_only',
+            'ground_truth': []
+        },
+    ]
+    
+    for task_data in tasks:
+        # Check if task already exists for this dataset_type
+        if Task.query.filter_by(task_id=task_data['task_id'], dataset_type='books').first():
+            continue
+        task = Task(
+            task_id=task_data['task_id'],
+            description=task_data['description'],
+            complexity=task_data['complexity'],
+            interface_type=task_data['interface_type'],
+            dataset_type='books',
+            ground_truth=json.dumps(task_data['ground_truth'])
+        )
+        db.session.add(task)
+    
+    db.session.commit()
+    print(f"Ensured {len(tasks)} book sample tasks exist")
 
 if __name__ == '__main__':
     with app.app_context():
@@ -153,9 +281,18 @@ if __name__ == '__main__':
                 print("Please download TMDB 5000 dataset and specify path in TMDB_CSV_PATH env var")
                 print("Or place the CSV file in the backend directory as 'tmdb_5000_movies.csv'")
         
-        # Create sample tasks
-        if Task.query.count() == 0:
-            create_sample_tasks()
+        # Check if books already exist
+        if Book.query.count() > 0:
+            print("Books already loaded. Skipping book data load.")
         else:
-            print("Tasks already exist. Skipping task creation.")
+            books_csv_path = os.getenv('BOOKS_CSV_PATH', 'books.csv')
+            if os.path.exists(books_csv_path):
+                load_books_from_csv(books_csv_path)
+            else:
+                print(f"Books CSV file not found at {books_csv_path}")
+                print("Place 'books.csv' in the backend directory or set BOOKS_CSV_PATH.")
+        
+        # Ensure sample tasks per dataset exist (idempotent)
+        create_movie_tasks()
+        create_book_tasks()
 

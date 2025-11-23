@@ -8,6 +8,7 @@ import CompletionPage from './CompletionPage'
 function ExperimentFlow() {
   const [searchParams] = useSearchParams()
   const participantId = searchParams.get('participant_id')
+  const datasetType = searchParams.get('dataset') || 'movies'
   const [plan, setPlan] = useState(null)
   const [loading, setLoading] = useState(true)
   const [currentInterfaceIndex, setCurrentInterfaceIndex] = useState(0)
@@ -19,11 +20,11 @@ function ExperimentFlow() {
     if (participantId) {
       loadPlan()
     }
-  }, [participantId])
+  }, [participantId, datasetType])
 
   const loadPlan = async () => {
     try {
-      const response = await getExperimentPlan(participantId)
+      const response = await getExperimentPlan(participantId, datasetType)
       setPlan(response.data)
     } catch (err) {
       console.error('Failed to load experiment plan:', err)
@@ -81,6 +82,8 @@ function ExperimentFlow() {
 
   const currentInterface = plan.interface_order[currentInterfaceIndex]
   const currentTasks = plan.tasks[currentInterface] || []
+  const effectiveDataset = plan.dataset_type || datasetType
+  const datasetLabel = effectiveDataset === 'books' ? 'Books dataset' : 'Movies dataset'
 
   if (showQuestionnaire) {
     return (
@@ -96,6 +99,9 @@ function ExperimentFlow() {
     <div className="container">
       <div className="card" style={{ marginBottom: '20px' }}>
         <h2>Experiment Progress</h2>
+        <p style={{ marginBottom: '10px', color: '#444' }}>
+          Dataset: <strong>{datasetLabel}</strong>
+        </p>
         <p>
           Interface {currentInterfaceIndex + 1} of {plan.interface_order.length}:{' '}
           <strong>{currentInterface.replace('_', ' ').toUpperCase()}</strong>
@@ -110,6 +116,7 @@ function ExperimentFlow() {
         interfaceType={currentInterface}
         tasks={currentTasks}
         currentTaskIndex={currentTaskIndex}
+        datasetType={effectiveDataset}
         onTaskComplete={() => {
           if (currentTaskIndex < currentTasks.length - 1) {
             setCurrentTaskIndex(currentTaskIndex + 1)
