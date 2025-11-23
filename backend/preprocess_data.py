@@ -208,8 +208,22 @@ def create_book_tasks():
             'ground_truth': []
         },
         {
+            'task_id': 'B04',
+            'description': 'Surface award-winning or bestselling books published before 1990 that have at least 4.0 average rating and fewer than 450 pages.',
+            'complexity': 'complex',
+            'interface_type': 'faceted',
+            'ground_truth': []
+        },
+        {
             'task_id': 'B02',
             'description': 'Using natural language, locate highly rated non-English books (average rating above 4.2) with fewer than 500 pages that were published between 2000 and 2020.',
+            'complexity': 'complex',
+            'interface_type': 'llm_assist',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B05',
+            'description': 'Ask the assistant for contemporary memoirs published after 2015 with more than 30,000 ratings and summarize how they differ.',
             'complexity': 'complex',
             'interface_type': 'llm_assist',
             'ground_truth': []
@@ -218,6 +232,13 @@ def create_book_tasks():
             'task_id': 'B03',
             'description': 'Ask the LLM-only interface for the highest-rated books over 400 pages with at least 50,000 ratings that were published before 2005.',
             'complexity': 'complex',
+            'interface_type': 'llm_only',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B06',
+            'description': 'Use the LLM-only interface to recommend cozy mystery series starters under 350 pages that have more than 500 text reviews.',
+            'complexity': 'simple',
             'interface_type': 'llm_only',
             'ground_truth': []
         },
@@ -268,14 +289,7 @@ if __name__ == '__main__':
                 print(f"Books CSV file not found at {books_csv_path}")
                 print("Place 'books.csv' in the backend directory or set BOOKS_CSV_PATH.")
         
-        # Create sample tasks per dataset
-        if Task.query.filter_by(dataset_type='movies').count() == 0:
-            create_movie_tasks()
-        else:
-            print("Movie tasks already exist. Skipping movie task creation.")
-        
-        if Task.query.filter_by(dataset_type='books').count() == 0:
-            create_book_tasks()
-        else:
-            print("Book tasks already exist. Skipping book task creation.")
+        # Ensure sample tasks per dataset exist (idempotent)
+        create_movie_tasks()
+        create_book_tasks()
 
