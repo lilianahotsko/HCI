@@ -183,7 +183,8 @@ def create_movie_tasks():
     ]
     
     for task_data in tasks:
-        if Task.query.filter_by(task_id=task_data['task_id']).first():
+        # Check if task already exists for this dataset_type
+        if Task.query.filter_by(task_id=task_data['task_id'], dataset_type='movies').first():
             continue
         task = Task(
             task_id=task_data['task_id'],
@@ -246,7 +247,8 @@ def create_book_tasks():
     ]
     
     for task_data in tasks:
-        if Task.query.filter_by(task_id=task_data['task_id']).first():
+        # Check if task already exists for this dataset_type
+        if Task.query.filter_by(task_id=task_data['task_id'], dataset_type='books').first():
             continue
         task = Task(
             task_id=task_data['task_id'],
