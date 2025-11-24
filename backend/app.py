@@ -135,8 +135,40 @@ def init_database():
             ensure_schema_columns()
             print("✓ Database schema verified")
             
+            # Load data if database is empty
+            from models import Task, Movie, Book
+            movie_count = Movie.query.count()
+            book_count = Book.query.count()
+            
+            if movie_count == 0 or book_count == 0:
+                print("Loading data from CSV files...")
+                try:
+                    from preprocess_data import load_movies_from_csv, load_books_from_csv
+                    import os
+                    
+                    if movie_count == 0:
+                        csv_path = os.getenv('TMDB_CSV_PATH', 'tmdb_5000_movies.csv')
+                        if os.path.exists(csv_path):
+                            load_movies_from_csv(csv_path)
+                            print(f"✓ Loaded {Movie.query.count()} movies")
+                        else:
+                            print(f"⚠️  Movies CSV not found at {csv_path}")
+                    
+                    if book_count == 0:
+                        books_csv_path = os.getenv('BOOKS_CSV_PATH', 'books.csv')
+                        if os.path.exists(books_csv_path):
+                            load_books_from_csv(books_csv_path)
+                            print(f"✓ Loaded {Book.query.count()} books")
+                        else:
+                            print(f"⚠️  Books CSV not found at {books_csv_path}")
+                except Exception as e:
+                    print(f"⚠️  Could not load data: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"✓ Data already loaded ({movie_count} movies, {book_count} books)")
+            
             # Create tasks if they don't exist
-            from models import Task
             task_count = Task.query.count()
             if task_count == 0:
                 print("Creating tasks...")

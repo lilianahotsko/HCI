@@ -18,8 +18,11 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy application code (including CSV files)
 COPY . .
+
+# Verify CSV files are present
+RUN ls -lh *.csv 2>/dev/null || echo "Warning: CSV files not found"
 
 # Expose port (Render will set PORT env var)
 EXPOSE 5000

@@ -31,6 +31,60 @@ def init_tasks():
             'error': str(e)
         }), 500
 
+@bp.route('/init-data', methods=['POST'])
+def init_data():
+    """Manually trigger data loading from CSV files"""
+    try:
+        with app.app_context():
+            from preprocess_data import load_movies_from_csv, load_books_from_csv, create_movie_tasks, create_book_tasks
+            import os
+            
+            results = {
+                'movies_loaded': 0,
+                'books_loaded': 0,
+                'tasks_created': 0,
+                'errors': []
+            }
+            
+            # Load movies
+            if Movie.query.count() == 0:
+                csv_path = os.getenv('TMDB_CSV_PATH', 'tmdb_5000_movies.csv')
+                if os.path.exists(csv_path):
+                    load_movies_from_csv(csv_path)
+                    results['movies_loaded'] = Movie.query.count()
+                else:
+                    results['errors'].append(f'Movies CSV not found at {csv_path}')
+            
+            # Load books
+            if Book.query.count() == 0:
+                books_csv_path = os.getenv('BOOKS_CSV_PATH', 'books.csv')
+                if os.path.exists(books_csv_path):
+                    load_books_from_csv(books_csv_path)
+                    results['books_loaded'] = Book.query.count()
+                else:
+                    results['errors'].append(f'Books CSV not found at {books_csv_path}')
+            
+            # Create tasks
+            before_tasks = Task.query.count()
+            create_movie_tasks()
+            create_book_tasks()
+            results['tasks_created'] = Task.query.count() - before_tasks
+            
+            return jsonify({
+                'success': True,
+                **results,
+                'total_movies': Movie.query.count(),
+                'total_books': Book.query.count(),
+                'total_tasks': Task.query.count()
+            }), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @bp.route('/stats', methods=['GET'])
 def get_stats():
     """Get database statistics"""
