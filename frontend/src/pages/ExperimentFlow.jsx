@@ -24,11 +24,21 @@ function ExperimentFlow() {
 
   const loadPlan = async () => {
     try {
+      setLoading(true)
       // Use 'mixed' mode to get tasks from both datasets
       const response = await getExperimentPlan(participantId, datasetType === 'mixed' ? 'mixed' : datasetType)
+      console.log('Experiment plan loaded:', response.data)
       setPlan(response.data)
     } catch (err) {
       console.error('Failed to load experiment plan:', err)
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        url: err.config?.url
+      })
+      // Set plan to null to show error message
+      setPlan(null)
     } finally {
       setLoading(false)
     }
@@ -66,7 +76,28 @@ function ExperimentFlow() {
     return (
       <div className="container">
         <div className="card">
+          <h2>Error Loading Experiment Plan</h2>
           <p>Failed to load experiment plan. Please try again.</p>
+          <p style={{ fontSize: '14px', color: '#666', marginTop: '10px' }}>
+            Check browser console for details.
+          </p>
+          <button 
+            onClick={() => {
+              setLoading(true)
+              loadPlan()
+            }}
+            style={{
+              marginTop: '20px',
+              padding: '10px 20px',
+              backgroundColor: '#3498db',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Retry
+          </button>
         </div>
       </div>
     )

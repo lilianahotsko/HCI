@@ -1,14 +1,33 @@
 import axios from 'axios'
 
 // Use environment variable for production, fallback to relative path for development
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
+// In production, VITE_API_BASE_URL should be set to your backend URL (e.g., https://your-backend.onrender.com)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api'
+
+console.log('API Base URL:', API_BASE_URL)
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  timeout: 30000  // 30 second timeout
 })
+
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  response => response,
+  error => {
+    console.error('API Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      message: error.message,
+      response: error.response?.data
+    })
+    return Promise.reject(error)
+  }
+)
 
 // Experiment endpoints
 export const createParticipant = (participantId) =>
