@@ -5,19 +5,37 @@ from flask import Blueprint, jsonify, send_file, render_template_string
 from app import app
 from database import db
 from models import Participant, Task, LogEntry, QuestionnaireResponse
-from analyze_results import (
-    analyze_task_performance,
-    analyze_questionnaires,
-    get_all_participants,
-    get_task_logs,
-    export_to_csv
-)
+try:
+    from analyze_results import (
+        analyze_task_performance,
+        analyze_questionnaires,
+        get_all_participants,
+        get_task_logs,
+        export_to_csv
+    )
+except ImportError as e:
+    print(f"Warning: Could not import analyze_results: {e}")
+    # Define fallback functions
+    def analyze_task_performance():
+        return []
+    def analyze_questionnaires():
+        return []
+    def get_all_participants():
+        return []
+    def get_task_logs():
+        return []
+    def export_to_csv():
+        pass
+
 import json
 import os
 import tempfile
 import zipfile
 from datetime import datetime
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 bp = Blueprint('results', __name__, url_prefix='/api/results')
 
@@ -335,19 +353,23 @@ def get_summary():
             'total_logs': LogEntry.query.count()
         }
         
-        if task_perf:
-            df = pd.DataFrame(task_perf)
-            
-            summary['by_interface'] = {}
-            for interface in df['interface_type'].unique():
-                interface_df = df[df['interface_type'] == interface]
-                summary['by_interface'][interface] = {
-                    'count': len(interface_df),
-                    'avg_duration_seconds': float(interface_df['duration_seconds'].mean()) if len(interface_df) > 0 else 0,
-                    'avg_precision': float(interface_df['precision'].mean()) if interface_df['precision'].notna().any() else None,
-                    'avg_recall': float(interface_df['recall'].mean()) if interface_df['recall'].notna().any() else None,
-                    'avg_f1_score': float(interface_df['f1_score'].mean()) if interface_df['f1_score'].notna().any() else None
-                }
+        if task_perf and pd is not None:
+            try:
+                df = pd.DataFrame(task_perf)
+                
+                summary['by_interface'] = {}
+                for interface in df['interface_type'].unique():
+                    interface_df = df[df['interface_type'] == interface]
+                    summary['by_interface'][interface] = {
+                        'count': len(interface_df),
+                        'avg_duration_seconds': float(interface_df['duration_seconds'].mean()) if len(interface_df) > 0 else 0,
+                        'avg_precision': float(interface_df['precision'].mean()) if interface_df['precision'].notna().any() else None,
+                        'avg_recall': float(interface_df['recall'].mean()) if interface_df['recall'].notna().any() else None,
+                        'avg_f1_score': float(interface_df['f1_score'].mean()) if interface_df['f1_score'].notna().any() else None
+                    }
+            except Exception as e:
+                print(f"Error calculating interface stats: {e}")
+                summary['by_interface'] = {}
         
         return jsonify(summary), 200
 

@@ -14,8 +14,29 @@ database_url = os.getenv('DATABASE_URL', 'sqlite:///hci_experiment.db')
 if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
+# Log database URL (without password for security)
+if database_url.startswith('postgresql://'):
+    # Mask password in logs
+    import re
+    masked_url = re.sub(r':([^:@]+)@', ':****@', database_url)
+    print(f"Connecting to PostgreSQL database: {masked_url}")
+else:
+    print(f"Using SQLite database: {database_url}")
+
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Connection pool settings for PostgreSQL
+if database_url.startswith('postgresql://'):
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,  # Verify connections before using
+        'pool_recycle': 300,    # Recycle connections after 5 minutes
+        'connect_args': {
+            'connect_timeout': 10,  # 10 second timeout
+            'sslmode': 'require'    # Require SSL for Render PostgreSQL
+        }
+    }
+
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # Initialize database
@@ -36,8 +57,12 @@ from models import Movie, Book, Participant, Task, LogEntry, QuestionnaireRespon
 
 def ensure_schema_columns():
     """Lightweight schema migrations for new columns/tables."""
-    inspector = inspect(db.engine)
-    tables = inspector.get_table_names()
+    try:
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+    except Exception as e:
+        print(f"Warning: Could not inspect database: {e}")
+        return  # Database not ready yet
     
     # Ensure books table exists with expected columns
     def add_column_if_missing(table_name, column_name, column_type_sql, existing_cols=None):
@@ -93,20 +118,78 @@ def ensure_schema_columns():
             with db.engine.begin() as conn:
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN task_set VARCHAR(10) DEFAULT 'A'"))
 
-with app.app_context():
-    db.create_all()
-    ensure_schema_columns()
+# Initialize database schema (lazy - only when app context is available)
+def init_database():
+    """Initialize database schema - called on first request"""
+    try:
+        with app.app_context():
+            # Test database connection first
+            db.engine.connect()
+            print("✓ Database connection successful")
+            
+            # Create tables
+            db.create_all()
+            print("✓ Database tables created/verified")
+            
+            # Ensure schema columns
+            ensure_schema_columns()
+            print("✓ Database schema verified")
+    except Exception as e:
+        print(f"⚠️  Database initialization error: {e}")
+        import traceback
+        traceback.print_exc()
+        # Don't fail startup - database might not be ready yet
+
+# Try to initialize database at startup, but don't fail if it's not ready
+try:
+    init_database()
+except Exception as e:
+    print(f"Warning: Could not initialize database at startup: {e}")
+    print("Database will be initialized on first request")
 
 # Import and register routes
 def register_routes():
-    from routes import experiment, search, logging_routes, questionnaire, results
-    app.register_blueprint(experiment.bp)
-    app.register_blueprint(search.bp)
-    app.register_blueprint(logging_routes.bp)
-    app.register_blueprint(questionnaire.bp)
-    app.register_blueprint(results.bp)
+    try:
+        from routes import experiment, search, logging_routes, questionnaire, results
+        app.register_blueprint(experiment.bp)
+        app.register_blueprint(search.bp)
+        app.register_blueprint(logging_routes.bp)
+        app.register_blueprint(questionnaire.bp)
+        app.register_blueprint(results.bp)
+    except Exception as e:
+        print(f"Error registering routes: {e}")
+        import traceback
+        traceback.print_exc()
+        # Register basic routes even if results route fails
+        from routes import experiment, search, logging_routes, questionnaire
+        app.register_blueprint(experiment.bp)
+        app.register_blueprint(search.bp)
+        app.register_blueprint(logging_routes.bp)
+        app.register_blueprint(questionnaire.bp)
 
 register_routes()
+
+# Track if database has been initialized
+_db_initialized = False
+
+# Ensure database is initialized before handling requests (Flask 2.x+ compatible)
+@app.before_request
+def ensure_db_initialized():
+    """Ensure database is initialized before requests"""
+    global _db_initialized
+    if not _db_initialized:
+        try:
+            # Check if tables exist, if not initialize
+            with app.app_context():
+                inspector = inspect(db.engine)
+                tables = inspector.get_table_names()
+                if not tables:
+                    init_database()
+                _db_initialized = True
+        except Exception as e:
+            # Database might not be ready yet, that's okay
+            # Will retry on next request
+            pass
 
 @app.route('/api/health', methods=['GET', 'OPTIONS'])
 def health():
