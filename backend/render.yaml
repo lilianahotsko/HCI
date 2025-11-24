@@ -1,10 +1,12 @@
 services:
   - type: web
     name: hci-experiment-backend
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.5"
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL
@@ -21,4 +23,3 @@ databases:
     plan: free
     databaseName: hci_experiment
     user: hci_user
-

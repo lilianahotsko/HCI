@@ -99,11 +99,12 @@ with app.app_context():
 
 # Import and register routes
 def register_routes():
-    from routes import experiment, search, logging_routes, questionnaire
+    from routes import experiment, search, logging_routes, questionnaire, results
     app.register_blueprint(experiment.bp)
     app.register_blueprint(search.bp)
     app.register_blueprint(logging_routes.bp)
     app.register_blueprint(questionnaire.bp)
+    app.register_blueprint(results.bp)
 
 register_routes()
 
