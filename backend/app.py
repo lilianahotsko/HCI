@@ -134,6 +134,23 @@ def init_database():
             # Ensure schema columns
             ensure_schema_columns()
             print("✓ Database schema verified")
+            
+            # Create tasks if they don't exist
+            from models import Task
+            task_count = Task.query.count()
+            if task_count == 0:
+                print("Creating tasks...")
+                try:
+                    from preprocess_data import create_movie_tasks, create_book_tasks
+                    create_movie_tasks()
+                    create_book_tasks()
+                    print(f"✓ Created tasks (total: {Task.query.count()})")
+                except Exception as e:
+                    print(f"⚠️  Could not create tasks: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"✓ Tasks already exist ({task_count} tasks)")
     except Exception as e:
         print(f"⚠️  Database initialization error: {e}")
         import traceback
@@ -150,22 +167,27 @@ except Exception as e:
 # Import and register routes
 def register_routes():
     try:
-        from routes import experiment, search, logging_routes, questionnaire, results
+        from routes import experiment, search, logging_routes, questionnaire, results, admin
         app.register_blueprint(experiment.bp)
         app.register_blueprint(search.bp)
         app.register_blueprint(logging_routes.bp)
         app.register_blueprint(questionnaire.bp)
         app.register_blueprint(results.bp)
+        app.register_blueprint(admin.bp)
     except Exception as e:
         print(f"Error registering routes: {e}")
         import traceback
         traceback.print_exc()
-        # Register basic routes even if results route fails
-        from routes import experiment, search, logging_routes, questionnaire
-        app.register_blueprint(experiment.bp)
-        app.register_blueprint(search.bp)
-        app.register_blueprint(logging_routes.bp)
-        app.register_blueprint(questionnaire.bp)
+        # Register basic routes even if some routes fail
+        try:
+            from routes import experiment, search, logging_routes, questionnaire, admin
+            app.register_blueprint(experiment.bp)
+            app.register_blueprint(search.bp)
+            app.register_blueprint(logging_routes.bp)
+            app.register_blueprint(questionnaire.bp)
+            app.register_blueprint(admin.bp)
+        except:
+            pass
 
 register_routes()
 
@@ -199,6 +221,18 @@ def health():
 def test():
     """Test endpoint to verify backend is accessible"""
     return {'status': 'ok', 'method': request.method, 'data': request.json if request.is_json else None}, 200
+
+@app.route('/api/routes', methods=['GET'])
+def list_routes():
+    """List all registered routes for debugging"""
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append({
+            'endpoint': rule.endpoint,
+            'methods': list(rule.methods),
+            'path': str(rule)
+        })
+    return jsonify({'routes': routes}), 200
 
 # Handle OPTIONS requests for CORS preflight
 @app.before_request

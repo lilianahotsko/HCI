@@ -1,8 +1,25 @@
 import axios from 'axios'
 
 // Use environment variable for production, fallback to relative path for development
-// In production, VITE_API_BASE_URL should be set to your backend URL (e.g., https://your-backend.onrender.com)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api'
+// In production, VITE_API_BASE_URL should be set to your backend URL
+// Example: https://your-backend.onrender.com (will auto-add /api)
+// Or: https://your-backend.onrender.com/api (also works)
+let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api'
+
+// Normalize the URL: remove trailing slashes, then ensure /api is included
+API_BASE_URL = API_BASE_URL.replace(/\/+$/, '')  // Remove trailing slashes
+
+if (API_BASE_URL.startsWith('http')) {
+  // It's a full URL (production)
+  if (!API_BASE_URL.endsWith('/api')) {
+    API_BASE_URL = API_BASE_URL + '/api'
+  }
+} else {
+  // It's a relative path (development)
+  if (API_BASE_URL !== '/api') {
+    API_BASE_URL = '/api'
+  }
+}
 
 console.log('API Base URL:', API_BASE_URL)
 
