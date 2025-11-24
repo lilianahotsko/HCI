@@ -135,52 +135,169 @@ def load_books_from_csv(csv_path):
     return books_added
 
 def create_movie_tasks():
-    """Create sample movie tasks for the experiment"""
-    # Provide distinct scenario prompts per interface so users see varied filters
-    tasks = [
+    """
+    Create movie tasks with multiple unique sets (A, B, C) for each interface.
+    This prevents repetition bias - each interface gets different tasks.
+    Uses task_set field to group tasks: 'A', 'B', or 'C'
+    """
+    # Task Set A - First set of unique tasks
+    tasks_set_a = [
         {
-            'task_id': 'T01',
+            'task_id': 'T01A',
             'description': 'Find all movies released after 2015 with runtime under 100 minutes.',
             'complexity': 'simple',
             'interface_type': 'faceted',
+            'task_set': 'A',
             'ground_truth': []
         },
         {
-            'task_id': 'T02',
+            'task_id': 'T02A',
             'description': 'Find all drama or thriller movies with a female lead, budget under $10M, sorted by highest revenue.',
             'complexity': 'complex',
             'interface_type': 'faceted',
+            'task_set': 'A',
             'ground_truth': []
         },
         {
-            'task_id': 'T03',
+            'task_id': 'T03A',
             'description': 'Use the LLM-assist interface to retrieve non-English comedies released between 2000 and 2015 with runtimes under 110 minutes.',
             'complexity': 'simple',
             'interface_type': 'llm_assist',
+            'task_set': 'A',
             'ground_truth': []
         },
         {
-            'task_id': 'T04',
+            'task_id': 'T04A',
             'description': 'Ask the LLM-assist interface for science fiction or adventure films released after 2008 with budgets above $80M and revenues over $200M, sorted by revenue.',
             'complexity': 'complex',
             'interface_type': 'llm_assist',
+            'task_set': 'A',
             'ground_truth': []
         },
         {
-            'task_id': 'T05',
+            'task_id': 'T05A',
             'description': 'Ask the LLM-only interface for mystery or crime movies released before 2000 with runtimes under 130 minutes and budgets below $40M.',
             'complexity': 'simple',
             'interface_type': 'llm_only',
+            'task_set': 'A',
             'ground_truth': []
         },
         {
-            'task_id': 'T06',
+            'task_id': 'T06A',
             'description': 'Use the LLM-only interface to surface female-led drama or history movies released between 1995 and 2020 with budgets under $35M but revenues above $90M.',
             'complexity': 'complex',
             'interface_type': 'llm_only',
+            'task_set': 'A',
             'ground_truth': []
         },
     ]
+    
+    # Task Set B - Second set of unique tasks (different scenarios)
+    tasks_set_b = [
+        {
+            'task_id': 'T01B',
+            'description': 'Locate action or adventure movies released between 2010 and 2020 with runtimes over 120 minutes.',
+            'complexity': 'simple',
+            'interface_type': 'faceted',
+            'task_set': 'B',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'T02B',
+            'description': 'Find horror or thriller films with male leads, released after 2015, with budgets between $5M and $50M, sorted by release year.',
+            'complexity': 'complex',
+            'interface_type': 'faceted',
+            'task_set': 'B',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'T03B',
+            'description': 'Using natural language, find romantic comedies from the 1990s with runtimes between 90 and 120 minutes.',
+            'complexity': 'simple',
+            'interface_type': 'llm_assist',
+            'task_set': 'B',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'T04B',
+            'description': 'Ask the assistant to identify animated or family films released after 2010 with revenues exceeding $100M and budgets under $150M.',
+            'complexity': 'complex',
+            'interface_type': 'llm_assist',
+            'task_set': 'B',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'T05B',
+            'description': 'Request from the LLM-only interface: documentary films released between 2005 and 2015 with runtimes over 90 minutes.',
+            'complexity': 'simple',
+            'interface_type': 'llm_only',
+            'task_set': 'B',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'T06B',
+            'description': 'Use the LLM-only interface to find war or history movies from before 2010 with budgets over $30M but revenues below $100M, sorted by rating.',
+            'complexity': 'complex',
+            'interface_type': 'llm_only',
+            'task_set': 'B',
+            'ground_truth': []
+        },
+    ]
+    
+    # Task Set C - Third set of unique tasks (different scenarios)
+    tasks_set_c = [
+        {
+            'task_id': 'T01C',
+            'description': 'Find science fiction movies released after 2012 with runtimes under 150 minutes.',
+            'complexity': 'simple',
+            'interface_type': 'faceted',
+            'task_set': 'C',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'T02C',
+            'description': 'Locate crime or mystery films with mixed-gender leads, released between 2000 and 2015, with revenues above $50M, sorted by budget descending.',
+            'complexity': 'complex',
+            'interface_type': 'faceted',
+            'task_set': 'C',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'T03C',
+            'description': 'Using the LLM-assist interface, find fantasy or adventure movies from the 2000s with runtimes between 100 and 140 minutes.',
+            'complexity': 'simple',
+            'interface_type': 'llm_assist',
+            'task_set': 'C',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'T04C',
+            'description': 'Ask the LLM-assist interface for biographical or historical dramas released after 2005 with budgets between $20M and $80M and revenues over $75M.',
+            'complexity': 'complex',
+            'interface_type': 'llm_assist',
+            'task_set': 'C',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'T05C',
+            'description': 'Request from the LLM-only interface: musical or music-themed films released before 2010 with runtimes under 120 minutes.',
+            'complexity': 'simple',
+            'interface_type': 'llm_only',
+            'task_set': 'C',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'T06C',
+            'description': 'Use the LLM-only interface to identify western or action-adventure films from 1990-2010 with budgets under $60M but revenues exceeding $80M.',
+            'complexity': 'complex',
+            'interface_type': 'llm_only',
+            'task_set': 'C',
+            'ground_truth': []
+        },
+    ]
+    
+    # Combine all task sets
+    tasks = tasks_set_a + tasks_set_b + tasks_set_c
     
     for task_data in tasks:
         # Check if task already exists for this dataset_type
@@ -192,59 +309,177 @@ def create_movie_tasks():
             complexity=task_data['complexity'],
             interface_type=task_data['interface_type'],
             dataset_type='movies',
+            task_set=task_data.get('task_set', 'A'),  # Store task set
             ground_truth=json.dumps(task_data['ground_truth'])
         )
         db.session.add(task)
     
     db.session.commit()
-    print(f"Ensured {len(tasks)} movie sample tasks exist")
+    print(f"Ensured {len(tasks)} movie sample tasks exist (3 sets: A, B, C)")
 
 def create_book_tasks():
-    """Create one sample task per interface for the books dataset"""
-    tasks = [
+    """
+    Create book tasks with multiple unique sets (A, B, C) for each interface.
+    This prevents repetition bias - each interface gets different tasks.
+    """
+    # Task Set A - First set of unique tasks
+    tasks_set_a = [
         {
-            'task_id': 'B01',
+            'task_id': 'B01A',
             'description': 'Find English-language books published after 2010 with fewer than 350 pages and highlight at least three options.',
             'complexity': 'simple',
             'interface_type': 'faceted',
+            'task_set': 'A',
             'ground_truth': []
         },
         {
-            'task_id': 'B04',
+            'task_id': 'B02A',
             'description': 'Surface award-winning or bestselling books published before 1990 that have at least 4.0 average rating and fewer than 450 pages.',
             'complexity': 'complex',
             'interface_type': 'faceted',
+            'task_set': 'A',
             'ground_truth': []
         },
         {
-            'task_id': 'B02',
+            'task_id': 'B03A',
             'description': 'Using natural language, locate highly rated non-English books (average rating above 4.2) with fewer than 500 pages that were published between 2000 and 2020.',
             'complexity': 'complex',
             'interface_type': 'llm_assist',
+            'task_set': 'A',
             'ground_truth': []
         },
         {
-            'task_id': 'B05',
+            'task_id': 'B04A',
             'description': 'Ask the assistant for contemporary memoirs published after 2015 with more than 30,000 ratings and summarize how they differ.',
             'complexity': 'complex',
             'interface_type': 'llm_assist',
+            'task_set': 'A',
             'ground_truth': []
         },
         {
-            'task_id': 'B03',
+            'task_id': 'B05A',
             'description': 'Ask the LLM-only interface for the highest-rated books over 400 pages with at least 50,000 ratings that were published before 2005.',
             'complexity': 'complex',
             'interface_type': 'llm_only',
+            'task_set': 'A',
             'ground_truth': []
         },
         {
-            'task_id': 'B06',
+            'task_id': 'B06A',
             'description': 'Use the LLM-only interface to recommend cozy mystery series starters under 350 pages that have more than 500 text reviews.',
             'complexity': 'simple',
             'interface_type': 'llm_only',
+            'task_set': 'A',
             'ground_truth': []
         },
     ]
+    
+    # Task Set B - Second set of unique tasks
+    tasks_set_b = [
+        {
+            'task_id': 'B01B',
+            'description': 'Locate fiction books published between 2005 and 2015 with page counts between 200 and 400 pages.',
+            'complexity': 'simple',
+            'interface_type': 'faceted',
+            'task_set': 'B',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B02B',
+            'description': 'Find science fiction or fantasy novels published after 2000 with average ratings above 4.0 and more than 10,000 ratings, sorted by publication year.',
+            'complexity': 'complex',
+            'interface_type': 'faceted',
+            'task_set': 'B',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B03B',
+            'description': 'Using the LLM-assist interface, find historical fiction books from the 1980s and 1990s with fewer than 600 pages.',
+            'complexity': 'simple',
+            'interface_type': 'llm_assist',
+            'task_set': 'B',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B04B',
+            'description': 'Ask the assistant to identify young adult novels published after 2010 with ratings between 3.5 and 4.5 and more than 5,000 text reviews.',
+            'complexity': 'complex',
+            'interface_type': 'llm_assist',
+            'task_set': 'B',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B05B',
+            'description': 'Request from the LLM-only interface: classic literature books published before 1980 with over 300 pages and at least 20,000 ratings.',
+            'complexity': 'simple',
+            'interface_type': 'llm_only',
+            'task_set': 'B',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B06B',
+            'description': 'Use the LLM-only interface to find romance novels published between 2000 and 2015 with ratings above 4.0 but fewer than 15,000 ratings.',
+            'complexity': 'complex',
+            'interface_type': 'llm_only',
+            'task_set': 'B',
+            'ground_truth': []
+        },
+    ]
+    
+    # Task Set C - Third set of unique tasks
+    tasks_set_c = [
+        {
+            'task_id': 'B01C',
+            'description': 'Find mystery or thriller books published after 2012 with page counts under 450 pages.',
+            'complexity': 'simple',
+            'interface_type': 'faceted',
+            'task_set': 'C',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B02C',
+            'description': 'Locate biography or autobiography books published before 2010 with average ratings above 3.8 and more than 8,000 ratings, sorted by ratings count.',
+            'complexity': 'complex',
+            'interface_type': 'faceted',
+            'task_set': 'C',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B03C',
+            'description': 'Using the LLM-assist interface, find poetry collections or literary fiction published between 1995 and 2010 with fewer than 300 pages.',
+            'complexity': 'simple',
+            'interface_type': 'llm_assist',
+            'task_set': 'C',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B04C',
+            'description': 'Ask the assistant for self-help or psychology books published after 2008 with ratings between 4.0 and 4.8 and more than 25,000 ratings.',
+            'complexity': 'complex',
+            'interface_type': 'llm_assist',
+            'task_set': 'C',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B05C',
+            'description': 'Request from the LLM-only interface: adventure or travel books published before 2015 with over 250 pages and at least 12,000 ratings.',
+            'complexity': 'simple',
+            'interface_type': 'llm_only',
+            'task_set': 'C',
+            'ground_truth': []
+        },
+        {
+            'task_id': 'B06C',
+            'description': 'Use the LLM-only interface to identify horror or supernatural fiction published between 2005 and 2020 with ratings above 3.9 but fewer than 20,000 ratings.',
+            'complexity': 'complex',
+            'interface_type': 'llm_only',
+            'task_set': 'C',
+            'ground_truth': []
+        },
+    ]
+    
+    # Combine all task sets
+    tasks = tasks_set_a + tasks_set_b + tasks_set_c
     
     for task_data in tasks:
         # Check if task already exists for this dataset_type
@@ -256,12 +491,13 @@ def create_book_tasks():
             complexity=task_data['complexity'],
             interface_type=task_data['interface_type'],
             dataset_type='books',
+            task_set=task_data.get('task_set', 'A'),  # Store task set
             ground_truth=json.dumps(task_data['ground_truth'])
         )
         db.session.add(task)
     
     db.session.commit()
-    print(f"Ensured {len(tasks)} book sample tasks exist")
+    print(f"Ensured {len(tasks)} book sample tasks exist (3 sets: A, B, C)")
 
 if __name__ == '__main__':
     with app.app_context():

@@ -8,7 +8,7 @@ import CompletionPage from './CompletionPage'
 function ExperimentFlow() {
   const [searchParams] = useSearchParams()
   const participantId = searchParams.get('participant_id')
-  const datasetType = searchParams.get('dataset') || 'movies'
+  const datasetType = searchParams.get('dataset') || 'mixed'
   const [plan, setPlan] = useState(null)
   const [loading, setLoading] = useState(true)
   const [currentInterfaceIndex, setCurrentInterfaceIndex] = useState(0)
@@ -24,7 +24,8 @@ function ExperimentFlow() {
 
   const loadPlan = async () => {
     try {
-      const response = await getExperimentPlan(participantId, datasetType)
+      // Use 'mixed' mode to get tasks from both datasets
+      const response = await getExperimentPlan(participantId, datasetType === 'mixed' ? 'mixed' : datasetType)
       setPlan(response.data)
     } catch (err) {
       console.error('Failed to load experiment plan:', err)
@@ -82,8 +83,19 @@ function ExperimentFlow() {
 
   const currentInterface = plan.interface_order[currentInterfaceIndex]
   const currentTasks = plan.tasks[currentInterface] || []
-  const effectiveDataset = plan.dataset_type || datasetType
-  const datasetLabel = effectiveDataset === 'books' ? 'Books dataset' : 'Movies dataset'
+  const currentTask = currentTasks[currentTaskIndex]
+  
+  // Get dataset type from current task (for mixed mode, each task can have different dataset)
+  const taskDatasetType = currentTask?.dataset_type || (plan.dataset_type === 'mixed' ? 'movies' : plan.dataset_type || datasetType)
+  const isMixedMode = plan.dataset_type === 'mixed'
+  
+  // Create dataset label
+  let datasetLabel = 'Mixed (Movies & Books)'
+  if (!isMixedMode) {
+    datasetLabel = taskDatasetType === 'books' ? 'Books dataset' : 'Movies dataset'
+  } else if (currentTask) {
+    datasetLabel = `Current task: ${taskDatasetType === 'books' ? 'Books' : 'Movies'} dataset`
+  }
 
   if (showQuestionnaire) {
     return (
@@ -116,7 +128,7 @@ function ExperimentFlow() {
         interfaceType={currentInterface}
         tasks={currentTasks}
         currentTaskIndex={currentTaskIndex}
-        datasetType={effectiveDataset}
+        datasetType={taskDatasetType}
         onTaskComplete={() => {
           if (currentTaskIndex < currentTasks.length - 1) {
             setCurrentTaskIndex(currentTaskIndex + 1)

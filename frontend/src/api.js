@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const API_BASE_URL = '/api'
+// Use environment variable for production, fallback to relative path for development
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -16,7 +17,7 @@ export const createParticipant = (participantId) =>
 export const giveConsent = (participantId) =>
   api.post('/experiment/consent', { participant_id: participantId })
 
-export const getExperimentPlan = (participantId, datasetType = 'movies') =>
+export const getExperimentPlan = (participantId, datasetType = 'mixed') =>
   api.get('/experiment/plan', { params: { participant_id: participantId, dataset_type: datasetType } })
 
 export const getGenres = (datasetType = 'movies') =>

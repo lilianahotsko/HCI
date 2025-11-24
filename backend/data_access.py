@@ -59,33 +59,75 @@ def _run_movies_query(filters, sort, limit):
 def _run_books_query(filters, sort, limit):
     query = Book.query
     
+    # Language filter - only apply if languages list is non-empty
     languages = filters.get('languages')
-    if languages:
+    if languages and len(languages) > 0:
         query = query.filter(Book.language.in_(languages))
     
+    # Author keyword filter - only apply if non-empty string
     author_keyword = filters.get('author_keyword')
-    if author_keyword:
+    if author_keyword and author_keyword.strip():
         query = query.filter(Book.authors.ilike(f"%{author_keyword}%"))
     
-    if filters.get('publication_year_min'):
-        query = query.filter(Book.publication_year >= filters['publication_year_min'])
-    if filters.get('publication_year_max'):
-        query = query.filter(Book.publication_year <= filters['publication_year_max'])
+    # Publication year filters - only apply if value is provided and not empty
+    pub_year_min = filters.get('publication_year_min')
+    if pub_year_min not in (None, '', 0):
+        try:
+            query = query.filter(Book.publication_year >= int(pub_year_min))
+        except (ValueError, TypeError):
+            pass
     
-    if filters.get('num_pages_min'):
-        query = query.filter(Book.num_pages >= filters['num_pages_min'])
-    if filters.get('num_pages_max'):
-        query = query.filter(Book.num_pages <= filters['num_pages_max'])
+    pub_year_max = filters.get('publication_year_max')
+    if pub_year_max not in (None, '', 0):
+        try:
+            query = query.filter(Book.publication_year <= int(pub_year_max))
+        except (ValueError, TypeError):
+            pass
     
-    if filters.get('average_rating_min'):
-        query = query.filter(Book.average_rating >= filters['average_rating_min'])
-    if filters.get('average_rating_max'):
-        query = query.filter(Book.average_rating <= filters['average_rating_max'])
+    # Number of pages filters
+    num_pages_min = filters.get('num_pages_min')
+    if num_pages_min not in (None, '', 0):
+        try:
+            query = query.filter(Book.num_pages >= int(num_pages_min))
+        except (ValueError, TypeError):
+            pass
     
-    if filters.get('ratings_count_min'):
-        query = query.filter(Book.ratings_count >= filters['ratings_count_min'])
-    if filters.get('ratings_count_max'):
-        query = query.filter(Book.ratings_count <= filters['ratings_count_max'])
+    num_pages_max = filters.get('num_pages_max')
+    if num_pages_max not in (None, '', 0):
+        try:
+            query = query.filter(Book.num_pages <= int(num_pages_max))
+        except (ValueError, TypeError):
+            pass
+    
+    # Average rating filters
+    avg_rating_min = filters.get('average_rating_min')
+    if avg_rating_min not in (None, '', 0):
+        try:
+            query = query.filter(Book.average_rating >= float(avg_rating_min))
+        except (ValueError, TypeError):
+            pass
+    
+    avg_rating_max = filters.get('average_rating_max')
+    if avg_rating_max not in (None, '', 0):
+        try:
+            query = query.filter(Book.average_rating <= float(avg_rating_max))
+        except (ValueError, TypeError):
+            pass
+    
+    # Ratings count filters
+    ratings_count_min = filters.get('ratings_count_min')
+    if ratings_count_min not in (None, '', 0):
+        try:
+            query = query.filter(Book.ratings_count >= int(ratings_count_min))
+        except (ValueError, TypeError):
+            pass
+    
+    ratings_count_max = filters.get('ratings_count_max')
+    if ratings_count_max not in (None, '', 0):
+        try:
+            query = query.filter(Book.ratings_count <= int(ratings_count_max))
+        except (ValueError, TypeError):
+            pass
     
     query = _apply_book_sort(query, sort)
     books = query.limit(limit).all()

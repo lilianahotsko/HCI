@@ -35,7 +35,7 @@ function ConsentPage() {
     )
   }
 
-  const datasetLabel = datasetType === 'books' ? 'book' : 'movie'
+  const datasetLabel = datasetType === 'books' ? 'book' : datasetType === 'mixed' ? 'movies and books' : 'movie'
 
   return (
     <div className="container" style={{ maxWidth: '800px', marginTop: '50px' }}>
@@ -45,7 +45,8 @@ function ConsentPage() {
           <h2>Study Overview</h2>
           <p>
             You are being invited to participate in a research study about search interfaces for datasets.
-            This study will involve using different types of search interfaces to find {datasetLabel}s in a database.
+            This study will involve using different types of search interfaces to find {datasetLabel} in databases.
+            {datasetType === 'mixed' && ' You will work with both movies and books datasets throughout the experiment.'}
           </p>
 
           <h2 style={{ marginTop: '30px' }}>What You Will Do</h2>

@@ -76,6 +76,18 @@ python app.py
 
 The backend will run on `http://localhost:5001` (using port 5001 because macOS AirPlay Receiver uses port 5000)
 
+## Deployment
+
+To deploy the app for user testing, see **[DEPLOYMENT.md](DEPLOYMENT.md)** for detailed instructions.
+
+**Quick Start (Render - Free)**:
+1. Push code to GitHub
+2. Deploy backend on Render (see DEPLOYMENT.md)
+3. Deploy frontend on Render
+4. Share the frontend URL with participants
+
+For fastest deployment, see **[QUICK_DEPLOY.md](QUICK_DEPLOY.md)**.
+
 **Troubleshooting:**
 - If you get "access denied" or 403 errors, follow these steps:
 
@@ -215,6 +227,25 @@ source venv/bin/activate
 python analyze_results.py
 ```
 
+### Step 1: Generate Ground Truth (Required for Accuracy Measurement)
+
+Before analyzing accuracy, generate ground truth answers for all tasks:
+
+```bash
+python generate_ground_truth.py
+```
+
+This script:
+- Parses each task description to extract filters
+- Executes queries to find all matching results
+- Stores result IDs as ground truth in the database
+- Reports how many correct answers each task has
+
+**To regenerate ground truth** (if tasks changed):
+```bash
+python generate_ground_truth.py --force
+```
+
 ### Available Commands:
 
 1. **Export all data to CSV:**
@@ -222,7 +253,7 @@ python analyze_results.py
    python analyze_results.py export
    ```
    Creates CSV files in the `results/` folder (project root):
-   - `results/task_performance.csv` - Task completion times, reformulations, accuracy
+   - `results/task_performance.csv` - Task completion times, reformulations, **accuracy metrics** (precision, recall, F1)
    - `results/questionnaire_responses.csv` - SUS, NASA-TLX, trust, preference responses
    - `results/all_logs.csv` - All interaction logs
    - `results/participants.csv` - Participant information and interface orders

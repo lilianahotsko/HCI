@@ -4,7 +4,6 @@ import { createParticipant } from '../api'
 
 function LandingPage() {
   const [participantId, setParticipantId] = useState('')
-  const [datasetType, setDatasetType] = useState('movies')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
@@ -22,7 +21,8 @@ function LandingPage() {
     try {
       const response = await createParticipant(participantId.trim())
       console.log('Participant created:', response.data)
-      navigate(`/consent?participant_id=${encodeURIComponent(participantId.trim())}&dataset=${datasetType}`)
+      // Use 'mixed' dataset mode - tasks will include both movies and books
+      navigate(`/consent?participant_id=${encodeURIComponent(participantId.trim())}&dataset=mixed`)
     } catch (err) {
       console.error('Error creating participant:', err)
       const errorMessage = err.response?.data?.error || err.message || 'Failed to create participant. Please try again.'
@@ -37,23 +37,11 @@ function LandingPage() {
       <div className="card">
         <h1>HCI Research Experiment</h1>
         <p style={{ marginTop: '20px', marginBottom: '30px' }}>
-          Welcome to the Search Platform study. Choose your dataset and enter your participant ID to begin.
+          Welcome to the Search Platform study. You will work with both movies and books datasets.
+          Enter your participant ID to begin.
         </p>
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="dataset">Dataset</label>
-            <select
-              id="dataset"
-              value={datasetType}
-              onChange={(e) => setDatasetType(e.target.value)}
-              disabled={loading}
-            >
-              <option value="movies">Movies (TMDB)</option>
-              <option value="books">Books (Goodreads)</option>
-            </select>
-          </div>
-
           <div className="form-group">
             <label htmlFor="participantId">Participant ID</label>
             <input

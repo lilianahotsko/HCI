@@ -39,6 +39,63 @@ def get_task_logs(participant_id=None, task_id=None, interface_type=None):
         logs = query.order_by(LogEntry.timestamp).all()
         return [log.to_dict() for log in logs]
 
+def calculate_accuracy_metrics(selected_ids, ground_truth_ids):
+    """
+    Calculate precision, recall, and F1 score.
+    
+    Args:
+        selected_ids: List of IDs selected by participant
+        ground_truth_ids: List of correct IDs (ground truth)
+    
+    Returns:
+        dict with precision, recall, f1, true_positives, false_positives, false_negatives
+    """
+    if not ground_truth_ids:
+        # No ground truth available
+        return {
+            'precision': None,
+            'recall': None,
+            'f1_score': None,
+            'true_positives': 0,
+            'false_positives': len(selected_ids),
+            'false_negatives': 0,
+            'accuracy': None
+        }
+    
+    # Convert to sets for easier comparison
+    selected_set = set(selected_ids)
+    ground_truth_set = set(ground_truth_ids)
+    
+    # Calculate metrics
+    true_positives = len(selected_set & ground_truth_set)  # Intersection
+    false_positives = len(selected_set - ground_truth_set)  # Selected but not correct
+    false_negatives = len(ground_truth_set - selected_set)  # Correct but not selected
+    
+    # Precision: Of what was selected, how many were correct?
+    precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0.0
+    
+    # Recall: Of what was correct, how many were found?
+    recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0.0
+    
+    # F1 Score: Harmonic mean of precision and recall
+    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+    
+    # Overall accuracy: (TP + TN) / Total, but we don't have true negatives in this context
+    # So we use precision as a proxy for accuracy
+    accuracy = precision
+    
+    return {
+        'precision': round(precision, 4),
+        'recall': round(recall, 4),
+        'f1_score': round(f1_score, 4),
+        'true_positives': true_positives,
+        'false_positives': false_positives,
+        'false_negatives': false_negatives,
+        'accuracy': round(accuracy, 4),
+        'ground_truth_count': len(ground_truth_ids),
+        'selected_count': len(selected_ids)
+    }
+
 def analyze_task_performance():
     """Analyze task completion times and accuracy"""
     with app.app_context():
@@ -62,7 +119,7 @@ def analyze_task_performance():
                     'submission': payload
                 }
         
-        # Calculate task durations
+        # Calculate task durations and accuracy
         results = []
         for key in task_ends:
             participant_id, task_id, interface_type = key
@@ -73,18 +130,38 @@ def analyze_task_performance():
                 # Get task details
                 task = Task.query.filter_by(task_id=task_id).first()
                 
-                results.append({
+                # Get selected IDs (handle both 'selected_movie_ids' and 'selected_book_ids')
+                selected_ids = submission.get('selected_movie_ids', []) or submission.get('selected_book_ids', []) or []
+                
+                # Get ground truth
+                ground_truth_ids = []
+                if task and task.ground_truth:
+                    try:
+                        ground_truth_ids = json.loads(task.ground_truth) if isinstance(task.ground_truth, str) else task.ground_truth
+                    except:
+                        ground_truth_ids = []
+                
+                # Calculate accuracy metrics
+                accuracy_metrics = calculate_accuracy_metrics(selected_ids, ground_truth_ids)
+                
+                result = {
                     'participant_id': participant_id,
                     'task_id': task_id,
                     'interface_type': interface_type,
                     'task_description': task.description if task else None,
                     'complexity': task.complexity if task else None,
+                    'dataset_type': task.dataset_type if task else None,
                     'duration_seconds': duration,
-                    'selected_movie_count': len(submission.get('selected_movie_ids', [])),
+                    'selected_count': len(selected_ids),
                     'result_count': submission.get('result_count', 0),
                     'reformulations': submission.get('reformulations', 0),
                     'submission': submission
-                })
+                }
+                
+                # Add accuracy metrics
+                result.update(accuracy_metrics)
+                
+                results.append(result)
         
         return results
 
@@ -197,10 +274,32 @@ def print_summary():
         if task_perf:
             df = pd.DataFrame(task_perf)
             print(f"\nTotal Task Completions: {len(task_perf)}")
+            
+            # Duration statistics
             print(f"\nAverage Task Duration by Interface:")
             print(df.groupby('interface_type')['duration_seconds'].mean())
+            
+            # Reformulation statistics
             print(f"\nAverage Reformulations by Interface:")
             print(df.groupby('interface_type')['reformulations'].mean())
+            
+            # Accuracy statistics (only for tasks with ground truth)
+            accuracy_df = df[df['precision'].notna()]
+            if len(accuracy_df) > 0:
+                print(f"\nAccuracy Metrics (tasks with ground truth: {len(accuracy_df)}/{len(df)}):")
+                print(f"\nAverage Precision by Interface:")
+                print(accuracy_df.groupby('interface_type')['precision'].mean())
+                print(f"\nAverage Recall by Interface:")
+                print(accuracy_df.groupby('interface_type')['recall'].mean())
+                print(f"\nAverage F1 Score by Interface:")
+                print(accuracy_df.groupby('interface_type')['f1_score'].mean())
+                
+                print(f"\nAverage Precision by Complexity:")
+                print(accuracy_df.groupby('complexity')['precision'].mean())
+                print(f"\nAverage Recall by Complexity:")
+                print(accuracy_df.groupby('complexity')['recall'].mean())
+            else:
+                print("\n⚠️  No accuracy metrics available. Run 'python generate_ground_truth.py' to generate ground truth.")
         
         # Questionnaires
         questionnaires = QuestionnaireResponse.query.all()

@@ -7,7 +7,14 @@ import os
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///hci_experiment.db')
+
+# Database configuration - support both SQLite (local) and PostgreSQL (production)
+database_url = os.getenv('DATABASE_URL', 'sqlite:///hci_experiment.db')
+# Render/Railway provide PostgreSQL URLs that start with postgres://, convert to postgresql://
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
@@ -15,8 +22,14 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-pro
 from database import db
 db.init_app(app)
 
-# Configure CORS - allow all origins for development
-CORS(app, supports_credentials=True)
+# Configure CORS
+# In production, restrict to your frontend domain
+# In development, allow all origins
+frontend_url = os.getenv('FRONTEND_URL', '*')
+if frontend_url == '*':
+    CORS(app, supports_credentials=True)  # Development: allow all
+else:
+    CORS(app, origins=[frontend_url], supports_credentials=True)  # Production: specific domain
 
 # Import models after db is initialized
 from models import Movie, Book, Participant, Task, LogEntry, QuestionnaireResponse
@@ -64,6 +77,21 @@ def ensure_schema_columns():
         if 'dataset_type' not in task_columns:
             with db.engine.begin() as conn:
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN dataset_type VARCHAR(50) DEFAULT 'movies'"))
+    
+    if 'participants' in tables:
+        participant_columns = {col['name'] for col in inspector.get_columns('participants')}
+        if 'task_order' not in participant_columns:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE participants ADD COLUMN task_order TEXT"))
+        if 'counterbalancing_condition' not in participant_columns:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE participants ADD COLUMN counterbalancing_condition INTEGER"))
+    
+    if 'tasks' in tables:
+        task_columns = {col['name'] for col in inspector.get_columns('tasks')}
+        if 'task_set' not in task_columns:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN task_set VARCHAR(10) DEFAULT 'A'"))
 
 with app.app_context():
     db.create_all()
@@ -104,5 +132,7 @@ if __name__ == '__main__':
         db.create_all()
     # Run on all interfaces (0.0.0.0) to allow access from frontend proxy
     # Using port 5001 because macOS AirPlay Receiver uses port 5000
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    # In production, port comes from PORT environment variable
+    port = int(os.getenv('PORT', 5001))
+    app.run(host='0.0.0.0', port=port, debug=False)  # debug=False for production
 

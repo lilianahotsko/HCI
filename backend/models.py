@@ -75,6 +75,8 @@ class Participant(db.Model):
     consent_given = Column(Boolean, default=False)
     consent_timestamp = Column(DateTime)
     interface_order = Column(Text)  # JSON array: ["faceted", "llm_assist", "llm_only"]
+    task_order = Column(Text)  # JSON object: {"faceted": ["T01", "B01", ...], "llm_assist": [...], ...}
+    counterbalancing_condition = Column(Integer)  # Condition number for systematic assignment (0-5 for interface, 0-7 for task)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     def to_dict(self):
@@ -84,6 +86,8 @@ class Participant(db.Model):
             'consent_given': self.consent_given,
             'consent_timestamp': self.consent_timestamp.isoformat() if self.consent_timestamp else None,
             'interface_order': json.loads(self.interface_order) if self.interface_order else [],
+            'task_order': json.loads(self.task_order) if self.task_order else {},
+            'counterbalancing_condition': self.counterbalancing_condition,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
@@ -97,6 +101,7 @@ class Task(db.Model):
     ground_truth = Column(Text)  # JSON array of movie IDs or description
     interface_type = Column(String(50))  # 'faceted', 'llm_assist', 'llm_only'
     dataset_type = Column(String(50), nullable=False, default='movies')
+    task_set = Column(String(10), default='A')  # 'A', 'B', or 'C' - for unique task assignment
     
     def to_dict(self):
         return {
@@ -106,7 +111,8 @@ class Task(db.Model):
             'complexity': self.complexity,
             'ground_truth': json.loads(self.ground_truth) if self.ground_truth else [],
             'interface_type': self.interface_type,
-            'dataset_type': self.dataset_type or 'movies'
+            'dataset_type': self.dataset_type or 'movies',
+            'task_set': self.task_set or 'A'
         }
 
 class LogEntry(db.Model):

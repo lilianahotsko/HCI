@@ -51,27 +51,40 @@ def give_consent():
         traceback.print_exc()
         return jsonify({'error': f'Failed to record consent: {str(e)}'}), 500
 
-VALID_DATASETS = {'movies', 'books'}
+VALID_DATASETS = {'movies', 'books', 'mixed'}
 
 def normalize_dataset_type(value):
-    return value if value in VALID_DATASETS else 'movies'
+    """Normalize dataset type, defaulting to mixed (new default behavior)"""
+    if value in VALID_DATASETS:
+        return value
+    return 'mixed'  # Default to mixed datasets
 
 @bp.route('/plan', methods=['GET'])
 def get_plan():
     """Get experiment plan for a participant"""
     participant_id = request.args.get('participant_id')
-    dataset_type = normalize_dataset_type(request.args.get('dataset_type', 'movies'))
+    dataset_param = request.args.get('dataset_type', 'mixed')
     
     if not participant_id:
         return jsonify({'error': 'participant_id required'}), 400
     
-    plan = get_experiment_plan(participant_id, dataset_type)
+    # Use mixed datasets by default (new behavior)
+    use_mixed = (dataset_param == 'mixed' or dataset_param not in VALID_DATASETS)
+    
+    plan = get_experiment_plan(participant_id, use_mixed_datasets=use_mixed)
     return jsonify(plan), 200
 
 @bp.route('/genres', methods=['GET'])
 def get_genres():
-    """Get all available genres"""
-    dataset_type = normalize_dataset_type(request.args.get('dataset_type', 'movies'))
+    """Get all available genres/facets"""
+    dataset_type = normalize_dataset_type(request.args.get('dataset_type', 'mixed'))
+    
+    # For mixed mode, we need to handle both datasets dynamically
+    # The frontend will pass the current task's dataset_type
+    if dataset_type == 'mixed':
+        # Default to movies for backward compatibility, but frontend should pass specific type
+        dataset_type = request.args.get('current_dataset', 'movies')
+    
     genres = get_all_genres(dataset_type)
     facet_label = 'Genres' if dataset_type == 'movies' else 'Languages'
     facet_field = 'genres' if dataset_type == 'movies' else 'languages'
