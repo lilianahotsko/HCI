@@ -24,7 +24,12 @@ function LLMOnlyInterface({ participantId, taskId, datasetType = 'movies', onSub
       setSelectedItems([])
     } catch (err) {
       console.error('Search failed:', err)
-      alert('Search failed. Please try again.')
+      const errorMessage = err.response?.data?.error || err.message || 'Search failed. Please try again.'
+      alert(`Search failed: ${errorMessage}`)
+      // Clear previous results on error
+      setAnswer('')
+      setResults([])
+      setSelectedItems([])
     } finally {
       setLoading(false)
     }

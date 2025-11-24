@@ -146,47 +146,87 @@ def llm_assist_execute():
 @bp.route('/llm_only', methods=['POST'])
 def llm_only_search():
     """LLM-only search with RAG"""
-    data = request.json
-    participant_id = data.get('participant_id')
-    task_id = data.get('task_id')
-    nl_query = data.get('nl_query')
-    dataset_type = normalize_dataset_type(data.get('dataset_type', 'movies'))
-    
-    if not nl_query:
-        return jsonify({'error': 'nl_query required'}), 400
-    
-    # Log NL query
-    log_event(participant_id, 'llm_only', task_id, 'nl_query_sent', {
-        'query': nl_query,
-        'dataset_type': dataset_type
-    })
-    
-    # Retrieve relevant records
-    retrieved_items = retrieve_items_for_rag(nl_query, run_structured_query, dataset_type=dataset_type)
-    
-    # Log retrieval
-    log_event(participant_id, 'llm_only', task_id, 'retrieval_completed', {
-        'retrieved_count': len(retrieved_items),
-        'retrieved_ids': [m['id'] for m in retrieved_items],
-        'dataset_type': dataset_type
-    })
-    
-    # Generate RAG answer
-    answer = answer_with_rag(nl_query, retrieved_items, dataset_type=dataset_type)
-    
-    # Log answer generation
-    log_event(participant_id, 'llm_only', task_id, 'answer_generated', {
-        'answer': answer,
-        'result_count': len(retrieved_items),
-        'dataset_type': dataset_type
-    })
-    
-    return jsonify({
-        'answer': answer,
-        'results': retrieved_items,
-        'count': len(retrieved_items),
-        'dataset_type': dataset_type
-    }), 200
+    try:
+        data = request.json
+        participant_id = data.get('participant_id')
+        task_id = data.get('task_id')
+        nl_query = data.get('nl_query')
+        dataset_type = normalize_dataset_type(data.get('dataset_type', 'movies'))
+        
+        if not nl_query:
+            return jsonify({'error': 'nl_query required'}), 400
+        
+        # Log NL query
+        try:
+            log_event(participant_id, 'llm_only', task_id, 'nl_query_sent', {
+                'query': nl_query,
+                'dataset_type': dataset_type
+            })
+        except Exception as log_err:
+            print(f"Warning: Could not log NL query: {log_err}")
+        
+        # Retrieve relevant records
+        try:
+            retrieved_items = retrieve_items_for_rag(nl_query, run_structured_query, dataset_type=dataset_type)
+        except Exception as retrieval_err:
+            print(f"Error retrieving items: {retrieval_err}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'error': f'Failed to retrieve items: {str(retrieval_err)}',
+                'answer': '',
+                'results': [],
+                'count': 0,
+                'dataset_type': dataset_type
+            }), 500
+        
+        # Log retrieval
+        try:
+            log_event(participant_id, 'llm_only', task_id, 'retrieval_completed', {
+                'retrieved_count': len(retrieved_items),
+                'retrieved_ids': [m['id'] for m in retrieved_items],
+                'dataset_type': dataset_type
+            })
+        except Exception as log_err:
+            print(f"Warning: Could not log retrieval: {log_err}")
+        
+        # Generate RAG answer
+        try:
+            answer = answer_with_rag(nl_query, retrieved_items, dataset_type=dataset_type)
+        except Exception as rag_err:
+            print(f"Error generating RAG answer: {rag_err}")
+            import traceback
+            traceback.print_exc()
+            # Return results even if RAG answer generation fails
+            noun = "movies" if dataset_type == 'movies' else "books"
+            answer = f"I found {len(retrieved_items)} {noun} matching your criteria. Please review the results below."
+        
+        # Log answer generation
+        try:
+            log_event(participant_id, 'llm_only', task_id, 'answer_generated', {
+                'answer': answer,
+                'result_count': len(retrieved_items),
+                'dataset_type': dataset_type
+            })
+        except Exception as log_err:
+            print(f"Warning: Could not log answer generation: {log_err}")
+        
+        return jsonify({
+            'answer': answer,
+            'results': retrieved_items,
+            'count': len(retrieved_items),
+            'dataset_type': dataset_type
+        }), 200
+    except Exception as e:
+        print(f"Error in llm_only_search: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': f'Internal server error: {str(e)}',
+            'answer': '',
+            'results': [],
+            'count': 0
+        }), 500
 
 def format_parsed_query(parsed, dataset_type='movies'):
     """Format parsed query into human-readable string"""
